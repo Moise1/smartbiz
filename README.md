@@ -1,1 +1,1 @@
-# soko.ai
+# smarbiz
