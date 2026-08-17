@@ -1,4 +1,4 @@
--- Soko.ai initial database schema
+-- Smartbiz.ai initial database schema
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
