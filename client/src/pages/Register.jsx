@@ -32,7 +32,7 @@ export default function Register() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 text-brand-600 font-bold text-2xl mb-2">
             <MapPin className="w-6 h-6" />
-            Soko.ai
+            SmartBiz
           </div>
           <h1 className="text-xl font-semibold text-gray-900">Create an account</h1>
           <p className="text-sm text-gray-500 mt-1">Join the local business community</p>

@@ -4,7 +4,7 @@ import { query } from '../config/database.js';
 
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, is_superadmin: user.is_superadmin },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
@@ -39,7 +39,7 @@ export async function login(req, res, next) {
     const { email, password } = req.body;
 
     const result = await query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role, is_superadmin FROM users WHERE email = $1',
       [email]
     );
 
@@ -58,7 +58,7 @@ export async function login(req, res, next) {
 export async function me(req, res, next) {
   try {
     const result = await query(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, role, is_superadmin, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
     if (!result.rows[0]) return res.status(404).json({ message: 'User not found' });

@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapPin, Phone, Mail, Globe, CheckCircle, Star } from 'lucide-react';
+import { MapPin, Phone, Mail, Globe, CheckCircle, Star, ArrowLeft } from 'lucide-react';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import StarRating from '../components/Business/StarRating.jsx';
 
 export default function BusinessDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [rating, setRating] = useState(0);
@@ -44,6 +45,14 @@ export default function BusinessDetail() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
+
       {/* Header */}
       <div className="card overflow-hidden mb-6">
         <div className="h-48 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-6xl">

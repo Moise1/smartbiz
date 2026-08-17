@@ -11,6 +11,7 @@ export default function Home() {
   const [aiPrefs, setAiPrefs] = useState('');
   const [recommendations, setRecommendations] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   const { data: featuredData } = useQuery({
     queryKey: ['businesses', 'featured'],
@@ -31,9 +32,13 @@ export default function Home() {
     e.preventDefault();
     if (!aiPrefs.trim()) return;
     setAiLoading(true);
+    setAiError(null);
+    setRecommendations(null);
     try {
       const data = await api.post('/ai/recommendations', { preferences: aiPrefs });
       setRecommendations(data.recommendations);
+    } catch (err) {
+      setAiError(err?.message || 'Could not fetch recommendations. Please try again.');
     } finally {
       setAiLoading(false);
     }
@@ -87,7 +92,10 @@ export default function Home() {
               {aiLoading ? 'Thinking…' : 'Recommend'}
             </button>
           </form>
-          {recommendations && (
+          {aiError && (
+            <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{aiError}</p>
+          )}
+          {recommendations && recommendations.length > 0 && (
             <ul className="mt-4 space-y-2">
               {recommendations.map((r, i) => (
                 <li key={i} className="p-3 rounded-lg bg-brand-50 text-sm">
@@ -96,6 +104,9 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+          )}
+          {recommendations && recommendations.length === 0 && (
+            <p className="mt-3 text-sm text-gray-500">No matching businesses found. Try a different search.</p>
           )}
         </div>
       </section>
