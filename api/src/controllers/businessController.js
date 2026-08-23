@@ -1,5 +1,9 @@
 import { query } from '../config/database.js';
 
+// Postgres rejects '' for NUMERIC columns — optional fields left blank in the
+// form must be stored as NULL.
+const orNull = (v) => (v === '' || v === undefined ? null : v);
+
 export async function getBusinesses(req, res, next) {
   try {
     const {
@@ -103,7 +107,8 @@ export async function createBusiness(req, res, next) {
          (owner_id, name, description, category_id, phone, email, website, address, city, latitude, longitude)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
-      [req.user.id, name, description, category_id, phone, email, website, address, city, latitude, longitude]
+      [req.user.id, name, description, category_id, orNull(phone), orNull(email),
+       orNull(website), orNull(address), city, orNull(latitude), orNull(longitude)]
     );
 
     res.status(201).json(result.rows[0]);
@@ -134,7 +139,8 @@ export async function updateBusiness(req, res, next) {
            website=$6, address=$7, city=$8, latitude=$9, longitude=$10, updated_at=NOW()
        WHERE id=$11
        RETURNING *`,
-      [name, description, category_id, phone, email, website, address, city, latitude, longitude, id]
+      [name, description, category_id, orNull(phone), orNull(email), orNull(website),
+       orNull(address), city, orNull(latitude), orNull(longitude), id]
     );
 
     res.json(result.rows[0]);

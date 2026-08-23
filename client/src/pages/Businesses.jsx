@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
 
 export default function Businesses() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
   const [categoryId, setCategoryId] = useState(searchParams.get('category_id') || '');
   const [city, setCity] = useState(searchParams.get('city') || '');
   const [page, setPage] = useState(1);
@@ -28,6 +30,13 @@ export default function Businesses() {
     queryFn: () => api.get('/categories'),
   });
 
+  // Live filtering: apply the search text 300ms after the user stops typing,
+  // no button click or Enter needed.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   useEffect(() => {
     const params = {};
     if (search) params.search = search;
@@ -41,19 +50,30 @@ export default function Businesses() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back
+      </button>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Local Businesses</h1>
 
       {/* Filters */}
-      <div className="card p-4 mb-8 flex flex-col sm:flex-row gap-3">
+      <form
+        onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }}
+        className="card p-4 mb-8 flex flex-col sm:flex-row gap-3"
+      >
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search businesses…"
             className="input pl-9"
           />
         </div>
+        <button type="submit" className="btn-primary whitespace-nowrap">Search</button>
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
@@ -70,7 +90,7 @@ export default function Businesses() {
           placeholder="City…"
           className="input sm:w-36"
         />
-      </div>
+      </form>
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

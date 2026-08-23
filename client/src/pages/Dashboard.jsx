@@ -58,6 +58,28 @@ export default function Dashboard() {
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
+  // Empty optional fields must go to the API as null — Postgres rejects ''
+  // for numeric columns like latitude/longitude.
+  function buildPayload() {
+    const clean = (v) => (typeof v === 'string' && v.trim() === '' ? null : v);
+    return {
+      ...form,
+      phone: clean(form.phone),
+      email: clean(form.email),
+      website: clean(form.website),
+      address: clean(form.address),
+      latitude: clean(form.latitude),
+      longitude: clean(form.longitude),
+    };
+  }
+
+  function errorText(err) {
+    if (Array.isArray(err?.errors) && err.errors.length) {
+      return err.errors.map((e) => e.msg).join('. ');
+    }
+    return err?.message || 'Could not save the business. Please try again.';
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
       <div className="flex items-center justify-between mb-8">
@@ -113,10 +135,18 @@ export default function Dashboard() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Website</label>
               <input value={form.website} onChange={set('website')} className="input" placeholder="https://…" />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Latitude (optional)</label>
+              <input type="number" step="any" value={form.latitude} onChange={set('latitude')} className="input" placeholder="-1.9441" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Longitude (optional)</label>
+              <input type="number" step="any" value={form.longitude} onChange={set('longitude')} className="input" placeholder="30.0619" />
+            </div>
           </div>
           <div className="flex gap-3 mt-5">
             <button
-              onClick={() => saveMutation.mutate(form)}
+              onClick={() => saveMutation.mutate(buildPayload())}
               disabled={saveMutation.isPending}
               className="btn-primary"
             >
@@ -127,7 +157,7 @@ export default function Dashboard() {
             </button>
           </div>
           {saveMutation.error && (
-            <p className="mt-3 text-sm text-red-500">{saveMutation.error.message}</p>
+            <p className="mt-3 text-sm text-red-500">{errorText(saveMutation.error)}</p>
           )}
         </div>
       )}

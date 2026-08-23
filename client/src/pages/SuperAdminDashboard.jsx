@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Plus, Building2, Star, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Plus, Building2, Star, Edit, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -14,6 +14,17 @@ export default function SuperAdminDashboard() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
   const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+
+  // Live search: filter the table 300ms after typing stops, back on page 1.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -21,8 +32,12 @@ export default function SuperAdminDashboard() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['all-businesses-admin', page],
-    queryFn: () => api.get(`/businesses?page=${page}&limit=${PAGE_SIZE}`),
+    queryKey: ['all-businesses-admin', page, search],
+    queryFn: () => {
+      const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+      if (search) params.set('search', search);
+      return api.get(`/businesses?${params}`);
+    },
     keepPreviousData: true,
   });
 
@@ -150,17 +165,28 @@ export default function SuperAdminDashboard() {
 
       {/* Table */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-brand-500" />
             All Businesses
             {total > 0 && <span className="text-sm font-normal text-gray-400">({total})</span>}
           </h2>
-          {total > 0 && (
-            <p className="text-sm text-gray-500">
-              Showing {from}–{to} of {total}
-            </p>
-          )}
+          <div className="flex items-center gap-4">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search businesses…"
+                className="input pl-9"
+              />
+            </div>
+            {total > 0 && (
+              <p className="text-sm text-gray-500 whitespace-nowrap hidden md:block">
+                Showing {from}–{to} of {total}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="card overflow-hidden">
@@ -188,6 +214,12 @@ export default function SuperAdminDashboard() {
                       ))}
                     </tr>
                   ))
+                ) : businesses.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                      No businesses match “{search}”.
+                    </td>
+                  </tr>
                 ) : businesses.map((b, idx) => (
                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-gray-400 tabular-nums">{from + idx}</td>

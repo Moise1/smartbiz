@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Sparkles, MapPin } from 'lucide-react';
@@ -8,6 +8,7 @@ import BusinessCard from '../components/Business/BusinessCard.jsx';
 export default function Home() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
   const [aiPrefs, setAiPrefs] = useState('');
   const [recommendations, setRecommendations] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -23,8 +24,26 @@ export default function Home() {
     queryFn: () => api.get('/categories'),
   });
 
+  // Live suggestions: fetch matching businesses 300ms after typing stops.
+  useEffect(() => {
+    if (!search.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const data = await api.get(`/businesses?search=${encodeURIComponent(search.trim())}&limit=5`);
+        setSuggestions(data.businesses || []);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   function handleSearch(e) {
     e.preventDefault();
+    setSuggestions([]);
     navigate(`/businesses?search=${encodeURIComponent(search)}`);
   }
 
@@ -68,6 +87,22 @@ export default function Home() {
                 placeholder="Search businesses, categories…"
                 className="input pl-10 text-gray-900"
               />
+              {suggestions.length > 0 && (
+                <ul className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden z-20 text-left">
+                  {suggestions.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/businesses/${b.id}`)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-brand-50 transition-colors"
+                      >
+                        <span className="font-medium text-gray-900">{b.name}</span>
+                        <span className="text-gray-400"> · {b.category_name} · {b.city}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <button type="submit" className="btn-primary whitespace-nowrap">Search</button>
           </form>
@@ -98,9 +133,14 @@ export default function Home() {
           {recommendations && recommendations.length > 0 && (
             <ul className="mt-4 space-y-2">
               {recommendations.map((r, i) => (
-                <li key={i} className="p-3 rounded-lg bg-brand-50 text-sm">
-                  <span className="font-semibold text-brand-700">{r.name}</span>
-                  <span className="text-gray-600"> — {r.reason}</span>
+                <li key={i}>
+                  <button
+                    onClick={() => navigate(`/businesses?search=${encodeURIComponent(r.name)}`)}
+                    className="w-full text-left p-3 rounded-lg bg-brand-50 text-sm hover:bg-brand-100 transition-colors"
+                  >
+                    <span className="font-semibold text-brand-700">{r.name}</span>
+                    <span className="text-gray-600"> — {r.reason}</span>
+                  </button>
                 </li>
               ))}
             </ul>
