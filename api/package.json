@@ -10,7 +10,8 @@
     "dev:client": "cd ../client && npm run dev -- --port 5000",
     "start": "node src/index.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:seed": "node src/db/seed.js"
+    "db:seed": "node src/db/seed.js",
+    "db:seed:owners": "node src/db/seedOwners.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",

@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import { query, getClient } from '../config/database.js';
 
 // Postgres rejects '' for NUMERIC columns — optional fields left blank in the
 // form must be stored as NULL.
@@ -102,13 +102,16 @@ export async function getBusinessById(req, res, next) {
 }
 
 export async function createBusiness(req, res, next) {
+  const client = await getClient();
   try {
     const {
       name, description, category_id, phone, email,
       website, address, city, latitude, longitude,
     } = req.body;
 
-    const result = await query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `INSERT INTO businesses
          (owner_id, name, description, category_id, phone, email, website, address, city, latitude, longitude)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
@@ -117,9 +120,18 @@ export async function createBusiness(req, res, next) {
        orNull(website), orNull(address), city, orNull(latitude), orNull(longitude)]
     );
 
+    await client.query(
+      'INSERT INTO user_businesses (user_id, business_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.user.id, result.rows[0].id]
+    );
+
+    await client.query('COMMIT');
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     next(err);
+  } finally {
+    client.release();
   }
 }
 
@@ -127,7 +139,7 @@ export async function updateBusiness(req, res, next) {
   try {
     const { id } = req.params;
     const ownership = await query(
-      'SELECT id FROM businesses WHERE id = $1 AND owner_id = $2',
+      'SELECT 1 FROM user_businesses WHERE business_id = $1 AND user_id = $2',
       [id, req.user.id]
     );
     if (!ownership.rows[0] && req.user.role !== 'admin') {
@@ -159,7 +171,11 @@ export async function deleteBusiness(req, res, next) {
   try {
     const { id } = req.params;
     await query(
-      'UPDATE businesses SET is_active = false WHERE id = $1 AND (owner_id = $2 OR $3 = \'admin\')',
+      `UPDATE businesses SET is_active = false
+       WHERE id = $1 AND (
+         EXISTS (SELECT 1 FROM user_businesses ub WHERE ub.business_id = $1 AND ub.user_id = $2)
+         OR $3 = 'admin'
+       )`,
       [id, req.user.id, req.user.role]
     );
     res.json({ message: 'Business removed' });
@@ -175,9 +191,10 @@ export async function getMyBusinesses(req, res, next) {
               COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
               COUNT(DISTINCT r.id) AS review_count
        FROM businesses b
+       JOIN user_businesses ub ON ub.business_id = b.id AND ub.user_id = $1
        LEFT JOIN categories c ON c.id = b.category_id
        LEFT JOIN reviews r ON r.business_id = b.id
-       WHERE b.owner_id = $1 AND b.is_active = true
+       WHERE b.is_active = true
        GROUP BY b.id, c.name
        ORDER BY b.created_at DESC`,
       [req.user.id]
