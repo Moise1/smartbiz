@@ -1,11 +1,22 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Star, CheckCircle } from 'lucide-react';
+import CategoryIcon from './CategoryIcon.jsx';
 
 export default function BusinessCard({ business }) {
   return (
-    <Link to={`/businesses/${business.id}`} className="card hover:shadow-md transition-shadow group">
-      <div className="h-40 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
-        <span className="text-4xl">{getCategoryEmoji(business.category_name)}</span>
+    <Link
+      to={`/businesses/${business.id}`}
+      className={`card hover:shadow-md transition-shadow group ${
+        business.plan_active && business.plan === 'premium' ? 'ring-2 ring-brand-400' : ''
+      }`}
+    >
+      <div className="relative h-40 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
+        <CategoryIcon category={business.category_name} className="w-14 h-14 text-brand-400" />
+        {business.plan_active && (
+          <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide bg-white/90 text-gray-500 px-2 py-0.5 rounded-full">
+            Sponsored
+          </span>
+        )}
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
@@ -36,20 +47,4 @@ export default function BusinessCard({ business }) {
       </div>
     </Link>
   );
-}
-
-function getCategoryEmoji(category) {
-  const map = {
-    'Restaurants & Cafes': '🍽️',
-    'Retail & Shops': '🛍️',
-    'Health & Wellness': '🏥',
-    'Beauty & Personal Care': '💈',
-    'Education & Training': '📚',
-    'Transport & Logistics': '🚚',
-    'Technology & IT': '💻',
-    'Finance & Insurance': '🏦',
-    'Construction & Real Estate': '🏗️',
-    'Events & Entertainment': '🎵',
-  };
-  return map[category] || '🏪';
 }

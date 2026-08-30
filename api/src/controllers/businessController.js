@@ -34,18 +34,24 @@ export async function getBusinesses(req, res, next) {
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     params.push(parseInt(limit), offset);
+    // Ad-based ranking: paid plans outrank free listings
+    // (premium > standard > basic); expired plans rank as free.
     const result = await query(
       `SELECT b.id, b.name, b.description, b.phone, b.email, b.address, b.city,
               b.latitude, b.longitude, b.is_verified, b.created_at,
+              b.plan, (b.plan <> 'free' AND b.plan_expires_at > NOW()) AS plan_active,
               c.name AS category_name, c.icon AS category_icon,
               COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
-              COUNT(DISTINCT r.id) AS review_count
+              COUNT(DISTINCT r.id) AS review_count,
+              CASE WHEN b.plan_expires_at > NOW() THEN
+                CASE b.plan WHEN 'premium' THEN 3 WHEN 'standard' THEN 2 WHEN 'basic' THEN 1 ELSE 0 END
+              ELSE 0 END AS plan_rank
        FROM businesses b
        LEFT JOIN categories c ON c.id = b.category_id
        LEFT JOIN reviews r ON r.business_id = b.id
        ${where}
        GROUP BY b.id, c.name, c.icon
-       ORDER BY b.is_verified DESC, avg_rating DESC
+       ORDER BY plan_rank DESC, b.is_verified DESC, avg_rating DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );

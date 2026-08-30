@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, Sparkles, MapPin } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
+import CategoryIcon from '../components/Business/CategoryIcon.jsx';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ export default function Home() {
               onClick={() => navigate(`/businesses?category_id=${cat.id}`)}
               className="card p-4 text-center hover:shadow-md hover:border-brand-200 transition-all group"
             >
-              <div className="text-2xl mb-1">{getCategoryEmoji(cat.name)}</div>
+              <CategoryIcon category={cat.name} className="w-6 h-6 mx-auto mb-2 text-brand-600" />
               <div className="text-xs font-medium text-gray-700 group-hover:text-brand-600">{cat.name}</div>
               <div className="text-xs text-gray-400">{cat.business_count} listed</div>
             </button>
@@ -180,20 +181,4 @@ export default function Home() {
       </section>
     </div>
   );
-}
-
-function getCategoryEmoji(name) {
-  const map = {
-    'Restaurants & Cafes': '🍽️',
-    'Retail & Shops': '🛍️',
-    'Health & Wellness': '🏥',
-    'Beauty & Personal Care': '💈',
-    'Education & Training': '📚',
-    'Transport & Logistics': '🚚',
-    'Technology & IT': '💻',
-    'Finance & Insurance': '🏦',
-    'Construction & Real Estate': '🏗️',
-    'Events & Entertainment': '🎵',
-  };
-  return map[name] || '🏪';
 }

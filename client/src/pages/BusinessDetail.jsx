@@ -5,6 +5,7 @@ import { MapPin, Phone, Mail, Globe, CheckCircle, Star, ArrowLeft } from 'lucide
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import StarRating from '../components/Business/StarRating.jsx';
+import CategoryIcon from '../components/Business/CategoryIcon.jsx';
 
 export default function BusinessDetail() {
   const { id } = useParams();
@@ -55,8 +56,8 @@ export default function BusinessDetail() {
 
       {/* Header */}
       <div className="card overflow-hidden mb-6">
-        <div className="h-48 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-6xl">
-          🏪
+        <div className="h-48 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
+          <CategoryIcon category={business.category_name} className="w-20 h-20 text-brand-400" />
         </div>
         <div className="p-6">
           <div className="flex items-start justify-between gap-4">

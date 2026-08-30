@@ -26,6 +26,9 @@ export default function Navbar() {
           <NavLink to="/businesses" className={({ isActive }) => isActive ? 'text-brand-600' : 'hover:text-gray-900'}>
             Businesses
           </NavLink>
+          <NavLink to="/pricing" className={({ isActive }) => isActive ? 'text-brand-600' : 'hover:text-gray-900'}>
+            Pricing
+          </NavLink>
         </nav>
 
         <div className="flex items-center gap-3">

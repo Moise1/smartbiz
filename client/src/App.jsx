@@ -6,6 +6,8 @@ import BusinessDetail from './pages/BusinessDetail.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Pricing from './pages/Pricing.jsx';
+import Subscribe from './pages/Subscribe.jsx';
 import SuperAdminDashboard from './pages/SuperAdminDashboard.jsx';
 import PrivateRoute from './components/PrivateRoute.jsx';
 import SuperAdminRoute from './components/SuperAdminRoute.jsx';
@@ -19,6 +21,8 @@ export default function App() {
         <Route path="businesses/:id" element={<BusinessDetail />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="pricing" element={<Pricing />} />
+        <Route path="subscribe" element={<PrivateRoute><Subscribe /></PrivateRoute>} />
         <Route path="dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="superadmin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
       </Route>
