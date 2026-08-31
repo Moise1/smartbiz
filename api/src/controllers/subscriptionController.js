@@ -23,7 +23,7 @@ export async function subscribe(req, res, next) {
     if (!business) return res.status(404).json({ message: 'Business not found' });
 
     const ownerCheck = await client.query(
-      'SELECT 1 FROM businesses WHERE id = $1 AND owner_id = $2',
+      'SELECT 1 FROM user_businesses WHERE business_id = $1 AND user_id = $2',
       [business_id, req.user.id]
     );
     if (!ownerCheck.rows[0] && req.user.role !== 'admin') {

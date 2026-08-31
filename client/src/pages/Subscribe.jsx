@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, Building2, CreditCard, Crown, Rocket, TrendingUp } from 'lucide-react';
+import { BadgeCheck, Building2, CreditCard, Crown, Plus, Rocket, TrendingUp } from 'lucide-react';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -14,6 +14,8 @@ export default function Subscribe() {
   const [businessId, setBusinessId] = useState('');
   const [planId, setPlanId] = useState(searchParams.get('plan') || 'standard');
   const [success, setSuccess] = useState(null);
+  const [showRegister, setShowRegister] = useState(false);
+  const [newBiz, setNewBiz] = useState({ name: '', description: '', category_id: '', city: 'Kigali' });
 
   const isOwner = user?.role === 'business_owner' || user?.role === 'admin';
 
@@ -32,6 +34,22 @@ export default function Subscribe() {
     queryKey: ['my-subscriptions'],
     queryFn: () => api.get('/subscriptions/mine'),
     enabled: isOwner,
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.get('/categories'),
+    enabled: isOwner,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: () => api.post('/businesses', newBiz),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['my-businesses'] });
+      setBusinessId(String(created.id));
+      setShowRegister(false);
+      setNewBiz({ name: '', description: '', category_id: '', city: 'Kigali' });
+    },
   });
 
   const subscribeMutation = useMutation({
@@ -78,14 +96,73 @@ export default function Subscribe() {
 
       <div className="card p-6 mb-8">
         {/* Step 1: business */}
-        <label className="block text-sm font-semibold text-gray-800 mb-2">1. Your business</label>
-        {myBusinesses?.length === 0 ? (
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-gray-800">1. Your business</label>
+          <button
+            type="button"
+            onClick={() => setShowRegister((s) => !s)}
+            className="text-sm text-brand-600 hover:underline flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Register a new business
+          </button>
+        </div>
+
+        {myBusinesses?.length === 0 && !showRegister && (
           <p className="text-sm text-gray-500 mb-4">
-            You haven't listed a business yet.{' '}
-            <Link to="/dashboard" className="text-brand-600 hover:underline">Add one from your dashboard</Link>{' '}
-            first.
+            You haven't listed a business yet — register one right here to subscribe it to a plan.
           </p>
-        ) : (
+        )}
+
+        {(showRegister || myBusinesses?.length === 0) && (
+          <div className="rounded-xl border border-gray-200 p-4 mb-5 bg-gray-50/60">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                value={newBiz.name}
+                onChange={(e) => setNewBiz((f) => ({ ...f, name: e.target.value }))}
+                className="input sm:col-span-2"
+                placeholder="Business name *"
+              />
+              <textarea
+                value={newBiz.description}
+                onChange={(e) => setNewBiz((f) => ({ ...f, description: e.target.value }))}
+                rows={2}
+                className="input resize-none sm:col-span-2"
+                placeholder="Short description *"
+              />
+              <select
+                value={newBiz.category_id}
+                onChange={(e) => setNewBiz((f) => ({ ...f, category_id: e.target.value }))}
+                className="input"
+              >
+                <option value="">Category *</option>
+                {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <input
+                value={newBiz.city}
+                onChange={(e) => setNewBiz((f) => ({ ...f, city: e.target.value }))}
+                className="input"
+                placeholder="City / District *"
+              />
+            </div>
+            <button
+              onClick={() => registerMutation.mutate()}
+              disabled={registerMutation.isPending || !newBiz.name || !newBiz.description || !newBiz.category_id || !newBiz.city}
+              className="btn-primary mt-3 disabled:opacity-50"
+            >
+              {registerMutation.isPending ? 'Registering…' : 'Register business'}
+            </button>
+            {registerMutation.error && (
+              <p className="mt-2 text-sm text-red-500">
+                {Array.isArray(registerMutation.error?.errors)
+                  ? registerMutation.error.errors.map((e) => e.msg).join('. ')
+                  : registerMutation.error?.message || 'Could not register the business.'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {myBusinesses?.length > 0 && (
           <select
             value={businessId}
             onChange={(e) => { setBusinessId(e.target.value); setSuccess(null); }}
