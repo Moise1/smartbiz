@@ -60,6 +60,35 @@ export async function subscribe(req, res, next) {
   }
 }
 
+// Admin: per-plan share and revenue, plus the latest subscriptions.
+export async function getSubscriptionStats(req, res, next) {
+  try {
+    const perPlan = await query(
+      `SELECT plan,
+              COUNT(*) FILTER (WHERE expires_at > NOW())::int AS active_count,
+              COUNT(*)::int AS total_count,
+              COALESCE(SUM(amount_rwf) FILTER (WHERE expires_at > NOW()), 0)::int AS revenue_active_rwf,
+              COALESCE(SUM(amount_rwf), 0)::int AS revenue_total_rwf
+       FROM subscriptions
+       GROUP BY plan`
+    );
+
+    const recent = await query(
+      `SELECT s.id, s.plan, s.amount_rwf, s.starts_at, s.expires_at,
+              b.name AS business_name, u.name AS user_name
+       FROM subscriptions s
+       JOIN businesses b ON b.id = s.business_id
+       JOIN users u ON u.id = s.user_id
+       ORDER BY s.created_at DESC
+       LIMIT 10`
+    );
+
+    res.json({ plans: perPlan.rows, recent: recent.rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getMySubscriptions(req, res, next) {
   try {
     const result = await query(

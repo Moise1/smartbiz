@@ -4,6 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
+import CategoryIcon from '../components/Business/CategoryIcon.jsx';
+
+// Group an already-ordered list into consecutive category sections.
+function groupByCategory(list = []) {
+  const groups = [];
+  for (const b of list) {
+    const name = b.category_name || 'Other';
+    const last = groups[groups.length - 1];
+    if (last && last.name === name) last.items.push(b);
+    else groups.push({ name, items: [b] });
+  }
+  return groups;
+}
 
 export default function Businesses() {
   const navigate = useNavigate();
@@ -106,11 +119,28 @@ export default function Businesses() {
       ) : (
         <>
           <p className="text-sm text-gray-500 mb-4">{data?.total} businesses found</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data?.businesses?.map((b) => (
-              <BusinessCard key={b.id} business={b} />
-            ))}
-          </div>
+          {!categoryId && !search ? (
+            // Grouped browse: every category leads with its premium subscribers
+            groupByCategory(data?.businesses).map((g) => (
+              <div key={g.name} className="mb-10">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4">
+                  <CategoryIcon category={g.name} className="w-5 h-5 text-brand-500" />
+                  {g.name}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {g.items.map((b) => (
+                    <BusinessCard key={b.id} business={b} />
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data?.businesses?.map((b) => (
+                <BusinessCard key={b.id} business={b} />
+              ))}
+            </div>
+          )}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-10">
               <button

@@ -54,7 +54,7 @@ export default function Pricing() {
               <div
                 key={plan.id}
                 className={`card p-8 flex flex-col relative ${
-                  isPremium ? 'border-2 border-brand-500 shadow-lg' : ''
+                  isPremium ? 'overflow-visible border-2 border-brand-500 shadow-lg' : ''
                 }`}
               >
                 {isPremium && (

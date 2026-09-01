@@ -6,6 +6,7 @@ import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import StarRating from '../components/Business/StarRating.jsx';
 import CategoryIcon from '../components/Business/CategoryIcon.jsx';
+import { getBusinessImage } from '../components/Business/categoryImages.js';
 
 export default function BusinessDetail() {
   const { id } = useParams();
@@ -56,8 +57,20 @@ export default function BusinessDetail() {
 
       {/* Header */}
       <div className="card overflow-hidden mb-6">
-        <div className="h-48 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
-          <CategoryIcon category={business.category_name} className="w-20 h-20 text-brand-400" />
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
+          {getBusinessImage(business) ? (
+            <>
+              <img
+                src={getBusinessImage(business)}
+                alt={business.category_name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Same uniform wash as the listing cards */}
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/45 via-gray-900/10 to-gray-900/15" />
+            </>
+          ) : (
+            <CategoryIcon category={business.category_name} className="w-20 h-20 text-brand-400" />
+          )}
         </div>
         <div className="p-6">
           <div className="flex items-start justify-between gap-4">

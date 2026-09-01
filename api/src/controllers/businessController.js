@@ -36,6 +36,17 @@ export async function getBusinesses(req, res, next) {
     params.push(parseInt(limit), offset);
     // Ad-based ranking: paid plans outrank free listings
     // (premium > standard > basic); expired plans rank as free.
+    // Browsing without a category filter groups by category, with the
+    // categories themselves ordered by their strongest subscription — so the
+    // category holding a premium subscriber leads the page, and that
+    // subscriber leads its category.
+    const groupByCategory = !category_id && !search;
+    const PLAN_RANK = `CASE WHEN b.plan_expires_at > NOW() THEN
+        CASE b.plan WHEN 'premium' THEN 3 WHEN 'standard' THEN 2 WHEN 'basic' THEN 1 ELSE 0 END
+      ELSE 0 END`;
+    const categoryOrder = groupByCategory
+      ? `MAX(${PLAN_RANK}) OVER (PARTITION BY b.category_id) DESC, c.name NULLS LAST, `
+      : '';
     const result = await query(
       `SELECT b.id, b.name, b.description, b.phone, b.email, b.address, b.city,
               b.latitude, b.longitude, b.is_verified, b.created_at,
@@ -43,15 +54,13 @@ export async function getBusinesses(req, res, next) {
               c.name AS category_name, c.icon AS category_icon,
               COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
               COUNT(DISTINCT r.id) AS review_count,
-              CASE WHEN b.plan_expires_at > NOW() THEN
-                CASE b.plan WHEN 'premium' THEN 3 WHEN 'standard' THEN 2 WHEN 'basic' THEN 1 ELSE 0 END
-              ELSE 0 END AS plan_rank
+              ${PLAN_RANK} AS plan_rank
        FROM businesses b
        LEFT JOIN categories c ON c.id = b.category_id
        LEFT JOIN reviews r ON r.business_id = b.id
        ${where}
        GROUP BY b.id, c.name, c.icon
-       ORDER BY plan_rank DESC, b.is_verified DESC, avg_rating DESC
+       ORDER BY ${categoryOrder}plan_rank DESC, b.is_verified DESC, avg_rating DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
