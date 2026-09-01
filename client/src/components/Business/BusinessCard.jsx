@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Star, CheckCircle } from 'lucide-react';
 import CategoryIcon from './CategoryIcon.jsx';
+import { CATEGORY_IMAGES } from './categoryImages.js';
 
 export default function BusinessCard({ business }) {
   return (
@@ -10,10 +11,23 @@ export default function BusinessCard({ business }) {
         business.plan_active && business.plan === 'premium' ? 'ring-2 ring-brand-400' : ''
       }`}
     >
-      <div className="relative h-40 bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
-        <CategoryIcon category={business.category_name} className="w-14 h-14 text-brand-400" />
+      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
+        {CATEGORY_IMAGES[business.category_name] ? (
+          <>
+            <img
+              src={CATEGORY_IMAGES[business.category_name]}
+              alt={business.category_name}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {/* Uniform wash so differently-lit photos read consistently */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/45 via-gray-900/10 to-gray-900/15" />
+          </>
+        ) : (
+          <CategoryIcon category={business.category_name} className="w-14 h-14 text-brand-400" />
+        )}
         {business.plan_active && (
-          <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide bg-white/90 text-gray-500 px-2 py-0.5 rounded-full">
+          <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide bg-white/90 text-gray-600 px-2 py-0.5 rounded-full">
             Sponsored
           </span>
         )}

@@ -4,6 +4,9 @@ import { ShieldCheck, Plus, Building2, Star, Edit, Trash2, ChevronLeft, ChevronR
 import { Link } from 'react-router-dom';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import AdminSidebar from '../components/Admin/AdminSidebar.jsx';
+import UsersSection from '../components/Admin/UsersSection.jsx';
+import SubscriptionsSection from '../components/Admin/SubscriptionsSection.jsx';
 
 const PAGE_SIZE = 10;
 
@@ -16,6 +19,7 @@ export default function SuperAdminDashboard() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [section, setSection] = useState('businesses');
 
   // Live search: filter the table 300ms after typing stops, back on page 1.
   useEffect(() => {
@@ -84,7 +88,13 @@ export default function SuperAdminDashboard() {
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div className="flex">
+      <AdminSidebar section={section} onSelect={setSection} />
+      <div className="flex-1 min-w-0 max-w-7xl px-4 sm:px-8 py-10">
+      {section === 'users' && <UsersSection />}
+      {section === 'subscriptions' && <SubscriptionsSection />}
+      {section === 'businesses' && (
+      <>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -314,6 +324,9 @@ export default function SuperAdminDashboard() {
           )}
         </div>
       </section>
+      </>
+      )}
+      </div>
     </div>
   );
 }

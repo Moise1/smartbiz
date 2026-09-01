@@ -5,6 +5,7 @@ import categoryRoutes from './categories.js';
 import reviewRoutes from './reviews.js';
 import aiRoutes from './ai.js';
 import subscriptionRoutes from './subscriptions.js';
+import userRoutes from './users.js';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/businesses/:business_id/reviews', reviewRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/ai', aiRoutes);
 router.use('/subscriptions', subscriptionRoutes);
+router.use('/users', userRoutes);
 
 export default router;
