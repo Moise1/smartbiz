@@ -15,9 +15,11 @@ export default function Home() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
 
+  // Diverse featured strip: sponsored businesses (badge) + the top-rated
+  // business per category, so paid plans join the list rather than replace it.
   const { data: featuredData } = useQuery({
     queryKey: ['businesses', 'featured'],
-    queryFn: () => api.get('/businesses?limit=6'),
+    queryFn: () => api.get('/businesses/featured'),
   });
 
   const { data: categories } = useQuery({

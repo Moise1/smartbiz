@@ -3,8 +3,9 @@ import { body } from 'express-validator';
 import {
   getBusinesses, getBusinessById, createBusiness,
   updateBusiness, deleteBusiness, getMyBusinesses,
+  getFeaturedBusinesses, getMyBusinessViews,
 } from '../controllers/businessController.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, optionalAuthenticate, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 
 const router = Router();
@@ -22,8 +23,10 @@ const businessValidation = [
 ];
 
 router.get('/', getBusinesses);
+router.get('/featured', getFeaturedBusinesses);
 router.get('/mine', authenticate, requireRole('business_owner', 'admin'), getMyBusinesses);
-router.get('/:id', getBusinessById);
+router.get('/mine/views', authenticate, requireRole('business_owner', 'admin'), getMyBusinessViews);
+router.get('/:id', optionalAuthenticate, getBusinessById);
 router.post('/', authenticate, requireRole('business_owner', 'admin'), businessValidation, createBusiness);
 router.put('/:id', authenticate, businessValidation, updateBusiness);
 router.delete('/:id', authenticate, deleteBusiness);

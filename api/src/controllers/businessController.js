@@ -104,7 +104,97 @@ export async function getBusinessById(req, res, next) {
       [req.params.id]
     );
 
+    await countProfileView(req.params.id, req.user);
+
     res.json({ ...result.rows[0], images: images.rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Record a public profile view — owners viewing their own business (and
+// admins) are not counted. Never fails the request.
+async function countProfileView(businessId, viewer) {
+  try {
+    if (viewer) {
+      if (viewer.role === 'admin') return;
+      const owned = await query(
+        'SELECT 1 FROM user_businesses WHERE business_id = $1 AND user_id = $2',
+        [businessId, viewer.id]
+      );
+      if (owned.rows[0]) return;
+    }
+    await query('INSERT INTO business_views (business_id) VALUES ($1)', [businessId]);
+    await query('UPDATE businesses SET viewed_times = viewed_times + 1 WHERE id = $1', [businessId]);
+  } catch (err) {
+    console.error('Could not record business view:', err.message);
+  }
+}
+
+// Featured strip for the home page: every business with an active paid plan
+// (they show a "Sponsored" badge) PLUS a diverse organic base — the top-rated
+// business of each category — so sponsors join the list instead of replacing it.
+export async function getFeaturedBusinesses(_req, res, next) {
+  try {
+    const result = await query(
+      `WITH ranked AS (
+         SELECT b.id, b.name, b.description, b.city, b.is_verified, b.created_at,
+                b.category_id, b.plan,
+                (b.plan <> 'free' AND b.plan_expires_at > NOW()) AS plan_active,
+                c.name AS category_name, c.icon AS category_icon,
+                COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
+                COUNT(DISTINCT r.id) AS review_count,
+                CASE WHEN b.plan_expires_at > NOW() THEN
+                  CASE b.plan WHEN 'premium' THEN 3 WHEN 'standard' THEN 2 WHEN 'basic' THEN 1 ELSE 0 END
+                ELSE 0 END AS plan_rank
+         FROM businesses b
+         LEFT JOIN categories c ON c.id = b.category_id
+         LEFT JOIN reviews r ON r.business_id = b.id
+         WHERE b.is_active = true
+         GROUP BY b.id, c.name, c.icon
+       ),
+       sponsored AS (
+         SELECT * FROM ranked WHERE plan_active
+         ORDER BY plan_rank DESC, avg_rating DESC LIMIT 6
+       ),
+       organic AS (
+         SELECT * FROM (
+           SELECT DISTINCT ON (category_id) *
+           FROM ranked
+           WHERE id NOT IN (SELECT id FROM sponsored)
+           ORDER BY category_id, avg_rating DESC, review_count DESC, is_verified DESC
+         ) per_category
+         ORDER BY avg_rating DESC, review_count DESC LIMIT 6
+       )
+       SELECT * FROM sponsored
+       UNION ALL
+       SELECT * FROM organic
+       ORDER BY plan_active DESC, plan_rank DESC, avg_rating DESC`
+    );
+    res.json({ businesses: result.rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Daily profile views across all businesses the owner is linked to, for the
+// dashboard line chart. Always returns one row per day (zeros included).
+export async function getMyBusinessViews(req, res, next) {
+  try {
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 7), 90);
+    const result = await query(
+      `SELECT to_char(d.day::date, 'YYYY-MM-DD') AS day, COALESCE(v.views, 0)::int AS views
+       FROM generate_series(CURRENT_DATE - ($2::int - 1), CURRENT_DATE, interval '1 day') AS d(day)
+       LEFT JOIN (
+         SELECT bv.viewed_at::date AS day, COUNT(*)::int AS views
+         FROM business_views bv
+         JOIN user_businesses ub ON ub.business_id = bv.business_id AND ub.user_id = $1
+         GROUP BY 1
+       ) v ON v.day = d.day::date
+       ORDER BY d.day`,
+      [req.user.id, days]
+    );
+    res.json(result.rows);
   } catch (err) {
     next(err);
   }

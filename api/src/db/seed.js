@@ -1,9 +1,25 @@
+import readline from 'node:readline/promises';
 import { Districts } from 'rwanda';
 import pool from '../config/database.js';
+import { truncateTables } from './truncate.js';
 import dotenv from 'dotenv';
+
 import bcrypt from 'bcryptjs';
 
 dotenv.config();
+
+// Ask whether to wipe the data tables before seeding. Non-interactive runs
+// (CI, piped stdin) skip the prompt and seed without truncating.
+async function confirmTruncate() {
+  if (!process.stdin.isTTY) return false;
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question('Truncate tables? (yes/No) ')).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } finally {
+    rl.close();
+  }
+}
 
 // Province → districts (hardcoded: rwanda@3.x Districts(province) is broken)
 const PROVINCE_DISTRICTS = {
@@ -176,9 +192,15 @@ const BUSINESSES = [
 // ── Seed ──────────────────────────────────────────────────────────────────────
 
 async function seed() {
+  const doTruncate = await confirmTruncate();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    if (doTruncate) {
+      await truncateTables(client);
+      console.log('Tables truncated.');
+    }
 
     // 1. Ensure extra categories exist
     const extraCategories = [

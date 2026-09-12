@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Building2, Star, Edit, Trash2 } from 'lucide-react';
+import { Plus, Building2, Star, Edit, Trash2, Eye, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import OwnerSidebar from '../components/Dashboard/OwnerSidebar.jsx';
+import ViewsChart from '../components/Dashboard/ViewsChart.jsx';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -11,6 +13,7 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
+  const isOwner = user?.role === 'business_owner' || user?.role === 'admin';
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -20,8 +23,22 @@ export default function Dashboard() {
   const { data: myBusinesses, isLoading } = useQuery({
     queryKey: ['my-businesses'],
     queryFn: () => api.get('/businesses/mine'),
-    enabled: user?.role === 'business_owner' || user?.role === 'admin',
+    enabled: isOwner,
   });
+
+  const { data: mySubscriptions } = useQuery({
+    queryKey: ['my-subscriptions'],
+    queryFn: () => api.get('/subscriptions/mine'),
+    enabled: isOwner,
+  });
+
+  const { data: viewsSeries } = useQuery({
+    queryKey: ['my-business-views'],
+    queryFn: () => api.get('/businesses/mine/views?days=30'),
+    enabled: isOwner,
+  });
+
+  const totalViews = (myBusinesses || []).reduce((sum, b) => sum + Number(b.viewed_times || 0), 0);
 
   const saveMutation = useMutation({
     mutationFn: (data) =>
@@ -81,13 +98,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex items-start gap-8">
+      {isOwner && (
+        <OwnerSidebar businesses={myBusinesses || []} subscriptions={mySubscriptions || []} />
+      )}
+
+      <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
         </div>
-        {(user?.role === 'business_owner' || user?.role === 'admin') && (
+        {isOwner && (
           <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm()); }} className="btn-primary">
             <Plus className="w-4 h-4" />
             Add Business
@@ -162,8 +184,28 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Profile views */}
+      {isOwner && (
+        <section className="card p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-brand-500" />
+              Profile views
+            </h2>
+            <span className="text-sm text-gray-500 flex items-center gap-1.5">
+              <Eye className="w-4 h-4" />
+              {totalViews.toLocaleString('en-US')} all-time
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1 mb-4">
+            How many times the public viewed your business profiles — last 30 days
+          </p>
+          <ViewsChart data={viewsSeries || []} />
+        </section>
+      )}
+
       {/* My Businesses */}
-      {(user?.role === 'business_owner' || user?.role === 'admin') && (
+      {isOwner && (
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-brand-500" />
@@ -190,9 +232,15 @@ export default function Dashboard() {
                       {b.is_verified && <span className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">Verified</span>}
                     </div>
                     <p className="text-sm text-gray-500">{b.category_name} · {b.city}</p>
-                    <div className="flex items-center gap-1 text-sm text-amber-500 mt-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-400" />
-                      {Number(b.avg_rating).toFixed(1)} ({b.review_count} reviews)
+                    <div className="flex items-center gap-3 text-sm mt-1">
+                      <span className="flex items-center gap-1 text-amber-500">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        {Number(b.avg_rating).toFixed(1)} ({b.review_count} reviews)
+                      </span>
+                      <span className="flex items-center gap-1 text-gray-400">
+                        <Eye className="w-3.5 h-3.5" />
+                        {Number(b.viewed_times || 0).toLocaleString('en-US')} views
+                      </span>
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
@@ -220,6 +268,7 @@ export default function Dashboard() {
           <Link to="/businesses" className="btn-primary inline-flex">Browse Businesses</Link>
         </div>
       )}
+      </div>
     </div>
   );
 }
