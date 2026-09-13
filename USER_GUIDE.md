@@ -87,6 +87,7 @@ Ranking order everywhere: **Premium → Standard → Basic → free**, then veri
 - Live search (no button needed), category dropdown, and city filter — all reflected in the URL, so links are shareable. 12 results per page.
 - **Two display modes:** with no filters, results are **grouped by category** (the category with the strongest paid subscriber leads the page). Once you search or pick a category, it switches to a flat grid. This is intentional.
 - Cards show a "SPONSORED" pill for paid plans and a **green ring for Premium**.
+- **Logged in as a business owner**, hovering the cover of one of *your own* businesses reveals the same controls the superadmin has: **upload** (replace the cover photo) and **delete** (remove the business, with confirmation). Admins see them on every card. The API enforces ownership, so the controls never appear on someone else's business.
 
 ### Business detail (`/businesses/:id`)
 Photo, verified check, rating, description, tap-to-call phone, email, and website links. **Reviews:** logged-in users get a 5-star picker + comment form (both required). A second review of the same business is rejected with *"You already reviewed this business."*
@@ -114,8 +115,9 @@ The three plan cards. "Choose plan" behaviour depends on who you are:
 Three steps: **pick a business** (or register one right in the form), **pick a plan**, **confirm**. Success shows a green banner, and your **Active subscriptions** list below. Customers see a "Business owners only" dead end here.
 
 ### Super Admin (`/superadmin`)
-A left icon rail (expands on hover) with three sections:
+A left icon rail (expands on hover) with four sections:
 - **Businesses** — searchable, paginated table of all ~90+ businesses (10/page) with add/edit/delete. The Verified column is a green/grey dot — **read-only in the UI** (changeable only in the DB). Delete has no confirm here either.
+- **Categories** — every business across all categories, shown as cards grouped by category, with a search box and category filter (paginated). Hovering a card's cover reveals two controls: **upload** (replace the cover photo — the new image immediately shows on the landing page and everywhere the business appears) and **delete** (removes the business, with a confirmation prompt).
 - **Users** — every account with role badges (purple = admin, green = owner, grey = customer). **Click any row** for a modal showing that user's businesses, plans and ratings.
 - **Subscriptions** — KPI tiles (active subs, monthly & all-time revenue), two **hover-interactive donut charts** by plan, a breakdown table, and the 10 most recent subscriptions. Empty until at least one business subscribes — so test subscribing first.
 

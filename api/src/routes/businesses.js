@@ -3,10 +3,11 @@ import { body } from 'express-validator';
 import {
   getBusinesses, getBusinessById, createBusiness,
   updateBusiness, deleteBusiness, getMyBusinesses,
-  getFeaturedBusinesses, getMyBusinessViews,
+  getFeaturedBusinesses, getMyBusinessViews, setCoverPhoto,
 } from '../controllers/businessController.js';
 import { authenticate, optionalAuthenticate, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { uploadImage } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -28,6 +29,13 @@ router.get('/mine', authenticate, requireRole('business_owner', 'admin'), getMyB
 router.get('/mine/views', authenticate, requireRole('business_owner', 'admin'), getMyBusinessViews);
 router.get('/:id', optionalAuthenticate, getBusinessById);
 router.post('/', authenticate, requireRole('business_owner', 'admin'), businessValidation, createBusiness);
+router.post(
+  '/:id/cover',
+  authenticate,
+  requireRole('business_owner', 'admin'),
+  uploadImage.single('image'),
+  setCoverPhoto
+);
 router.put('/:id', authenticate, businessValidation, updateBusiness);
 router.delete('/:id', authenticate, deleteBusiness);
 

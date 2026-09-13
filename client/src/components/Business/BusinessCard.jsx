@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Star, CheckCircle } from 'lucide-react';
 import CategoryIcon from './CategoryIcon.jsx';
+import CoverControls from './CoverControls.jsx';
 import { getBusinessImage } from './categoryImages.js';
 import { useLanguage } from '../../context/LanguageContext.jsx';
 
-export default function BusinessCard({ business }) {
+// canManage adds the cover upload/delete controls (owners on their own
+// businesses, admins everywhere) — pass busy/onUpload/onDelete with it.
+export default function BusinessCard({ business, canManage = false, busy = false, onUpload, onDelete }) {
   const { t, translateCategory } = useLanguage();
-  const cover = getBusinessImage(business);
+  // An uploaded cover photo wins; otherwise fall back to the category artwork
+  const cover = business.cover_url || getBusinessImage(business);
   return (
     <Link
       to={`/businesses/${business.id}`}
@@ -34,6 +38,7 @@ export default function BusinessCard({ business }) {
             {t('featured.sponsored')}
           </span>
         )}
+        {canManage && <CoverControls busy={busy} onUpload={onUpload} onDelete={onDelete} />}
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">

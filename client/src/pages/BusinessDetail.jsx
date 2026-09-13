@@ -58,10 +58,10 @@ export default function BusinessDetail() {
       {/* Header */}
       <div className="card overflow-hidden mb-6">
         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center">
-          {getBusinessImage(business) ? (
+          {(business.images?.[0]?.url || getBusinessImage(business)) ? (
             <>
               <img
-                src={getBusinessImage(business)}
+                src={business.images?.[0]?.url || getBusinessImage(business)}
                 alt={business.category_name}
                 className="absolute inset-0 w-full h-full object-cover"
               />

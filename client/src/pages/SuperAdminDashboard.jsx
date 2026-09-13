@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import AdminSidebar from '../components/Admin/AdminSidebar.jsx';
 import UsersSection from '../components/Admin/UsersSection.jsx';
 import SubscriptionsSection from '../components/Admin/SubscriptionsSection.jsx';
+import CoversSection from '../components/Admin/CoversSection.jsx';
 
 const PAGE_SIZE = 10;
 
@@ -91,6 +92,7 @@ export default function SuperAdminDashboard() {
     <div className="flex">
       <AdminSidebar section={section} onSelect={setSection} />
       <div className="flex-1 min-w-0 max-w-7xl px-4 sm:px-8 py-10">
+      {section === 'covers' && <CoversSection />}
       {section === 'users' && <UsersSection />}
       {section === 'subscriptions' && <SubscriptionsSection />}
       {section === 'businesses' && (

@@ -1,4 +1,12 @@
+import { unlink } from 'fs/promises';
+import { join, basename } from 'path';
 import { query, getClient } from '../config/database.js';
+import { UPLOADS_DIR } from '../middleware/upload.js';
+
+// Uploaded cover photo, when one exists (falls back to category art client-side)
+const COVER_URL = `(SELECT bi.url FROM business_images bi
+    WHERE bi.business_id = b.id AND bi.is_primary = true
+    ORDER BY bi.id DESC LIMIT 1)`;
 
 // Postgres rejects '' for NUMERIC columns — optional fields left blank in the
 // form must be stored as NULL.
@@ -52,6 +60,7 @@ export async function getBusinesses(req, res, next) {
               b.latitude, b.longitude, b.is_verified, b.created_at,
               b.plan, (b.plan <> 'free' AND b.plan_expires_at > NOW()) AS plan_active,
               c.name AS category_name, c.icon AS category_icon,
+              ${COVER_URL} AS cover_url,
               COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
               COUNT(DISTINCT r.id) AS review_count,
               ${PLAN_RANK} AS plan_rank
@@ -142,6 +151,7 @@ export async function getFeaturedBusinesses(_req, res, next) {
                 b.category_id, b.plan,
                 (b.plan <> 'free' AND b.plan_expires_at > NOW()) AS plan_active,
                 c.name AS category_name, c.icon AS category_icon,
+                ${COVER_URL} AS cover_url,
                 COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
                 COUNT(DISTINCT r.id) AS review_count,
                 CASE WHEN b.plan_expires_at > NOW() THEN
@@ -283,10 +293,50 @@ export async function deleteBusiness(req, res, next) {
   }
 }
 
+// Superadmin uploads/replaces a business's cover photo; owners can do the
+// same for their own businesses. The previous cover row (and its file, when
+// it lives in our uploads dir) is removed.
+export async function setCoverPhoto(req, res, next) {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
+
+    const { id } = req.params;
+    if (req.user.role !== 'admin') {
+      const owned = await query(
+        'SELECT 1 FROM user_businesses WHERE business_id = $1 AND user_id = $2',
+        [id, req.user.id]
+      );
+      if (!owned.rows[0]) return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const business = await query('SELECT id FROM businesses WHERE id = $1 AND is_active = true', [id]);
+    if (!business.rows[0]) return res.status(404).json({ message: 'Business not found' });
+
+    const old = await query(
+      'DELETE FROM business_images WHERE business_id = $1 AND is_primary = true RETURNING url',
+      [id]
+    );
+    for (const row of old.rows) {
+      if (row.url?.startsWith('/uploads/')) {
+        await unlink(join(UPLOADS_DIR, basename(row.url))).catch(() => {});
+      }
+    }
+
+    const url = `/uploads/${req.file.filename}`;
+    const inserted = await query(
+      'INSERT INTO business_images (business_id, url, is_primary) VALUES ($1, $2, true) RETURNING id, url',
+      [id, url]
+    );
+    res.status(201).json(inserted.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getMyBusinesses(req, res, next) {
   try {
     const result = await query(
-      `SELECT b.*, c.name AS category_name,
+      `SELECT b.*, c.name AS category_name, ${COVER_URL} AS cover_url,
               COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
               COUNT(DISTINCT r.id) AS review_count
        FROM businesses b

@@ -1,7 +1,8 @@
-import { Building2, Users, CreditCard } from 'lucide-react';
+import { Building2, Users, CreditCard, Images } from 'lucide-react';
 
 const ITEMS = [
   { id: 'businesses', label: 'Businesses', icon: Building2 },
+  { id: 'covers', label: 'Categories', icon: Images },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
 ];

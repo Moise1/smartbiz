@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
 import CategoryIcon from '../components/Business/CategoryIcon.jsx';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // Group an already-ordered list into consecutive category sections.
 function groupByCategory(list = []) {
@@ -21,7 +22,11 @@ function groupByCategory(list = []) {
 
 export default function Businesses() {
   const { t, translateCategory } = useLanguage();
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const navigate = useNavigate();
+  const [busyId, setBusyId] = useState(null);
+  const [manageError, setManageError] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
@@ -44,6 +49,57 @@ export default function Businesses() {
     queryKey: ['categories'],
     queryFn: () => api.get('/categories'),
   });
+
+  // A logged-in owner gets upload/delete controls on their own businesses
+  // (an admin gets them on every business), same as the superadmin's
+  // Featured section. The API enforces ownership on both endpoints.
+  const isOwnerRole = user?.role === 'business_owner' || user?.role === 'admin';
+  const { data: myBusinesses } = useQuery({
+    queryKey: ['my-businesses'],
+    queryFn: () => api.get('/businesses/mine'),
+    enabled: isOwnerRole,
+  });
+  const ownedIds = new Set((myBusinesses || []).map((b) => b.id));
+
+  function invalidate() {
+    qc.invalidateQueries({ queryKey: ['businesses'] });
+    qc.invalidateQueries({ queryKey: ['my-businesses'] });
+  }
+
+  const uploadMutation = useMutation({
+    mutationFn: ({ id, file }) => {
+      const fd = new FormData();
+      fd.append('image', file);
+      return api.post(`/businesses/${id}/cover`, fd);
+    },
+    onMutate: ({ id }) => { setBusyId(id); setManageError(null); },
+    onSuccess: invalidate,
+    onError: (err) => setManageError(err?.message || 'Could not upload the image.'),
+    onSettled: () => setBusyId(null),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/businesses/${id}`),
+    onMutate: (id) => { setBusyId(id); setManageError(null); },
+    onSuccess: invalidate,
+    onError: (err) => setManageError(err?.message || 'Could not delete the business.'),
+    onSettled: () => setBusyId(null),
+  });
+
+  // Props BusinessCard needs to show the cover controls, or none at all
+  function manageProps(b) {
+    if (!isOwnerRole || (user.role !== 'admin' && !ownedIds.has(b.id))) return {};
+    return {
+      canManage: true,
+      busy: busyId === b.id,
+      onUpload: (file) => uploadMutation.mutate({ id: b.id, file }),
+      onDelete: () => {
+        if (window.confirm(`Delete "${b.name}"? It disappears from all listings.`)) {
+          deleteMutation.mutate(b.id);
+        }
+      },
+    };
+  }
 
   // Live filtering: apply the search text 300ms after the user stops typing,
   // no button click or Enter needed.
@@ -121,6 +177,9 @@ export default function Businesses() {
       ) : (
         <>
           <p className="text-sm text-gray-500 mb-4">{data?.total} businesses found</p>
+          {manageError && (
+            <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{manageError}</p>
+          )}
           {!categoryId && !search ? (
             // Grouped browse: every category leads with its premium subscribers
             groupByCategory(data?.businesses).map((g) => (
@@ -131,7 +190,7 @@ export default function Businesses() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {g.items.map((b) => (
-                    <BusinessCard key={b.id} business={b} />
+                    <BusinessCard key={b.id} business={b} {...manageProps(b)} />
                   ))}
                 </div>
               </div>
@@ -139,7 +198,7 @@ export default function Businesses() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {data?.businesses?.map((b) => (
-                <BusinessCard key={b.id} business={b} />
+                <BusinessCard key={b.id} business={b} {...manageProps(b)} />
               ))}
             </div>
           )}
