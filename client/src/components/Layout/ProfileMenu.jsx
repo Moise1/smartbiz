@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 
 function initials(name) {
   return (
@@ -24,6 +25,7 @@ const ROLE_LABELS = {
 
 export default function ProfileMenu() {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -87,7 +89,7 @@ export default function ProfileMenu() {
                 className="btn-primary w-full text-sm py-1.5 justify-center"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                {user.is_superadmin ? 'Super Admin Dashboard' : 'Dashboard'}
+                {user.is_superadmin ? 'Super Admin Dashboard' : t('nav.dashboard')}
               </Link>
             )}
             <button
@@ -95,7 +97,7 @@ export default function ProfileMenu() {
               className="btn-secondary w-full text-sm py-1.5 justify-center"
             >
               <LogOut className="w-4 h-4" />
-              Logout
+              {t('nav.logout')}
             </button>
           </div>
         </div>

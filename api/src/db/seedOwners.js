@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 dotenv.config();
 
 // 20 business-owner users with randomly paired real Rwandan names. Emails are
-// derived from the name (first.last@smartbiz.rw) — the generated logins are
+// derived from the name (first.last@gmail.com) — the generated logins are
 // printed at the end of the run. 5 of the owners, picked at random, get linked
 // to random existing businesses through the user_businesses join table.
 // Re-runnable: an email that already exists is kept (its role is refreshed).
@@ -41,11 +41,11 @@ function shuffle(arr) {
   return a;
 }
 
-// "Immaculée Nyirahabimana" → "immaculee.nyirahabimana@smartbiz.rw"
+// "Immaculée Nyirahabimana" → "immaculee.nyirahabimana@gmail.com"
 function emailFor(first, last) {
   const slug = (s) =>
     s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
-  return `${slug(first)}.${slug(last)}@smartbiz.rw`;
+  return `${slug(first)}.${slug(last)}@gmail.com`;
 }
 
 // Random unique (first, last) pairs: shuffle both pools and zip, so no email

@@ -5,9 +5,11 @@ import { Search, Sparkles, MapPin } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
 import CategoryIcon from '../components/Business/CategoryIcon.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t, translateCategory } = useLanguage();
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [aiPrefs, setAiPrefs] = useState('');
@@ -73,13 +75,13 @@ export default function Home() {
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <MapPin className="w-6 h-6" />
-            <span className="text-brand-100 font-medium">Kigali & Beyond</span>
+            <span className="text-brand-100 font-medium">{t('hero.location')}</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Discover Local Businesses with AI
+            {t('hero.title')}
           </h1>
           <p className="text-brand-100 text-lg mb-8">
-            Find restaurants, shops, services and more in your community — powered by intelligent recommendations.
+            {t('hero.subtitle')}
           </p>
           <form onSubmit={handleSearch} className="flex gap-2 max-w-xl mx-auto">
             <div className="relative flex-1">
@@ -87,7 +89,7 @@ export default function Home() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search businesses, categories…"
+                placeholder={t('hero.searchPlaceholder')}
                 className="input pl-10 text-gray-900"
               />
               {suggestions.length > 0 && (
@@ -107,7 +109,7 @@ export default function Home() {
                 </ul>
               )}
             </div>
-            <button type="submit" className="btn-primary whitespace-nowrap">Search</button>
+            <button type="submit" className="btn-primary whitespace-nowrap">{t('hero.search')}</button>
           </form>
         </div>
       </section>
@@ -117,17 +119,17 @@ export default function Home() {
         <div className="card p-6 shadow-lg">
           <div className="flex items-center gap-2 mb-3 text-brand-600 font-semibold">
             <Sparkles className="w-5 h-5" />
-            AI Recommendations
+            {t('ai.title')}
           </div>
           <form onSubmit={handleAiRecommend} className="flex gap-2">
             <input
               value={aiPrefs}
               onChange={(e) => setAiPrefs(e.target.value)}
-              placeholder="Tell us what you're looking for… e.g. 'healthy lunch near Remera'"
+              placeholder={t('ai.placeholder')}
               className="input flex-1"
             />
             <button type="submit" disabled={aiLoading} className="btn-primary whitespace-nowrap">
-              {aiLoading ? 'Thinking…' : 'Recommend'}
+              {aiLoading ? t('ai.thinking') : t('ai.recommend')}
             </button>
           </form>
           {aiError && (
@@ -156,7 +158,7 @@ export default function Home() {
 
       {/* Categories */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-14">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('categories.title')}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {categories?.map((cat) => (
             <button
@@ -165,8 +167,8 @@ export default function Home() {
               className="card p-4 text-center hover:shadow-md hover:border-brand-200 transition-all group"
             >
               <CategoryIcon category={cat.name} className="w-6 h-6 mx-auto mb-2 text-brand-600" />
-              <div className="text-xs font-medium text-gray-700 group-hover:text-brand-600">{cat.name}</div>
-              <div className="text-xs text-gray-400">{cat.business_count} listed</div>
+              <div className="text-xs font-medium text-gray-700 group-hover:text-brand-600">{translateCategory(cat.name)}</div>
+              <div className="text-xs text-gray-400">{t('categories.listed', { count: cat.business_count })}</div>
             </button>
           ))}
         </div>
@@ -174,7 +176,7 @@ export default function Home() {
 
       {/* Featured */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-14 mb-10">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Businesses</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('featured.title')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {featuredData?.businesses?.map((b) => (
             <BusinessCard key={b.id} business={b} />

@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom';
 import { MapPin, Star, CheckCircle } from 'lucide-react';
 import CategoryIcon from './CategoryIcon.jsx';
 import { getBusinessImage } from './categoryImages.js';
+import { useLanguage } from '../../context/LanguageContext.jsx';
 
 export default function BusinessCard({ business }) {
+  const { t, translateCategory } = useLanguage();
   const cover = getBusinessImage(business);
   return (
     <Link
@@ -17,7 +19,7 @@ export default function BusinessCard({ business }) {
           <>
             <img
               src={cover}
-              alt={business.category_name}
+              alt={translateCategory(business.category_name)}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
@@ -29,7 +31,7 @@ export default function BusinessCard({ business }) {
         )}
         {business.plan_active && (
           <span className="absolute top-2 right-2 text-[10px] font-semibold uppercase tracking-wide bg-white/90 text-gray-600 px-2 py-0.5 rounded-full">
-            Sponsored
+            {t('featured.sponsored')}
           </span>
         )}
       </div>
@@ -44,7 +46,7 @@ export default function BusinessCard({ business }) {
         </div>
         {business.category_name && (
           <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium">
-            {business.category_name}
+            {translateCategory(business.category_name)}
           </span>
         )}
         <p className="mt-2 text-sm text-gray-500 line-clamp-2">{business.description}</p>

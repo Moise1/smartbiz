@@ -5,6 +5,7 @@ import { ArrowLeft, Search, SlidersHorizontal } from 'lucide-react';
 import api from '../api/client.js';
 import BusinessCard from '../components/Business/BusinessCard.jsx';
 import CategoryIcon from '../components/Business/CategoryIcon.jsx';
+import { useLanguage } from '../context/LanguageContext.jsx';
 
 // Group an already-ordered list into consecutive category sections.
 function groupByCategory(list = []) {
@@ -19,6 +20,7 @@ function groupByCategory(list = []) {
 }
 
 export default function Businesses() {
+  const { t, translateCategory } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -82,19 +84,19 @@ export default function Businesses() {
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search businesses…"
+            placeholder={t('hero.searchPlaceholder')}
             className="input pl-9"
           />
         </div>
-        <button type="submit" className="btn-primary whitespace-nowrap">Search</button>
+        <button type="submit" className="btn-primary whitespace-nowrap">{t('hero.search')}</button>
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           className="input sm:w-52"
         >
-          <option value="">All Categories</option>
+          <option value="">{t('categories.all')}</option>
           {categories?.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>{translateCategory(c.name)}</option>
           ))}
         </select>
         <input
@@ -125,7 +127,7 @@ export default function Businesses() {
               <div key={g.name} className="mb-10">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4">
                   <CategoryIcon category={g.name} className="w-5 h-5 text-brand-500" />
-                  {g.name}
+                  {translateCategory(g.name)}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {g.items.map((b) => (

@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "home": "Ahabanza",
+    "businesses": "Ubucuruzi",
+    "pricing": "Ibiciro",
+    "dashboard": "Ikibaho",
+    "logout": "Gusohoka",
+    "login": "Kwinjira",
+    "register": "Kwiyandikisha"
+  },
+  "lang": {
+    "en": "Icyongereza",
+    "rw": "Ikinyarwanda",
+    "switchTo": "Hindura ururimi"
+  },
+  "hero": {
+    "location": "Kigali n'ahandi",
+    "title": "Menya Ubucuruzi bwo mu Karere Ukoresheje AI",
+    "subtitle": "Shakisha resitora, amaduka, serivisi n'ibindi byinshi mu baturanyi bawe — bifashijwe n'inama zitangwa n'ubwenge bw'ubukorano (AI).",
+    "searchPlaceholder": "Shakisha ubucuruzi, ibyiciro...",
+    "search": "Shakisha"
+  },
+  "ai": {
+    "title": "Inama za AI",
+    "placeholder": "Tubwire icyo ushaka... urugero: 'ifunguro ryiza ry'amanywa hafi ya Remera'",
+    "recommend": "Tanga Inama",
+    "thinking": "Tegereza…"
+  },
+  "categories": {
+    "title": "Reba ibyiciro",
+    "all": "Ibyiciro Byose",
+    "listed": "{{count}} zanditswe",
+    "names": {
+      "Beauty & Personal Care": "Isuku n'Ubwiza bw'Umubiri",
+      "Car Wash": "Koza Imodoka",
+      "Construction & Real Estate": "Ubwubatsi n'Imitungo Itimukanwa",
+      "Education & Training": "Uburezi n'Amahugurwa",
+      "Events & Entertainment": "Ibirori n'Imyidagaduro",
+      "Finance & Insurance": "Imari n'Ubwishingizi",
+      "Health & Wellness": "Ubuzima n'Imibereho Myiza",
+      "Hotels & Accommodation": "Amahoteri n'Aho Kuraramo",
+      "Restaurants & Cafes": "Resitora na Kafe",
+      "Retail & Shops": "Amaduka",
+      "Technology & IT": "Ikoranabuhanga",
+      "Transport & Logistics": "Ubwikorezi n'Ubuvunuzi"
+    }
+  },
+  "featured": {
+    "title": "Ubucuruzi Bwatoranyijwe",
+    "sponsored": "Byatewe Inkunga"
+  },
+  "footer": {
+    "tagline": "Gushaka ubucuruzi bwo mu karere bifashijwe na AI, muri Kigali n'ahandi."
+  },
+  "pricing": {
+    "title": "Kuruza ubucuruzi bwawe ukoresheje SmartBiz Ads",
+    "subtitle": "Iyandikishe ubucuruzi bwawe kuri plan kugira ngo ubone umwanya wo hejuru igihe abakiriya bashakisha kandi bareba. Ibyamamare mu cyiciro cya Premium bigaragara bwa mbere bakurikirwa n'aba Standard, hanyuma Basic — iby'ubuntu bikaziraho nyuma.",
+    "choose": "Hitamo {{plan}}",
+    "perMonth": "/ mu kwezi",
+    "bestVisibility": "Kugaragara cyane",
+    "plans": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "premium": "Premium"
+    },
+    "taglines": {
+      "Get ahead of free listings": "Banza imbere y'abakoresha ubuntu",
+      "Stand out in your category": "Garagara mu cyiciro cyawe",
+      "Top of every list": "Umwanya w'imbere kuri buri rutonde"
+    },
+    "features": {
+      "Ranked above all free listings": "Ishyirwa hejuru y'abakoresha ubuntu bose",
+      "Appears higher in search results": "Igaragara hejuru mu biranga gushakisha",
+      "Standard business profile": "Umwirondoro w'ubucuruzi usanzwe",
+      "Ranked above Basic and free listings": "Ishyirwa hejuru ya Basic n'abakoresha ubuntu",
+      "\"Sponsored\" badge on your listing": "Ikirango cya \"Sponsored\" kuri konti yawe",
+      "Priority in category browsing": "Ihabwa priority mu gushakisha mu cyiciro",
+      "Top placement in all rankings": "Umwanya wo hejuru mu biranga byose",
+      "Featured on the SmartBiz home page": "Igaragara ku rupapuro rw'itangiriro rwa SmartBiz",
+      "Highlighted listing card": "Ikarita y'ubucuruzi igaragara cyane"
+    }
+  }
+}

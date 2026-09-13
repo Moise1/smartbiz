@@ -231,7 +231,7 @@ async function seed() {
     }
 
     // 4. Ensure seed owner user exists
-    const seedEmail = 'seed.owner@smartbiz.rw';
+    const seedEmail = 'seed.owner@gmail.com';
     let ownerId;
     const existing = await client.query('SELECT id FROM users WHERE email = $1', [seedEmail]);
     if (existing.rows.length) {
@@ -271,7 +271,7 @@ async function seed() {
           biz.name,
           biz.description,
           phone,
-          `${emailSlug}@smartbiz.rw`,
+          `${emailSlug}@gmail.com`,
           `${biz.district} District, Rwanda`,
           biz.district,
           lat.toFixed(7),

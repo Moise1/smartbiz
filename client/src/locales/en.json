@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "home": "Home",
+    "businesses": "Businesses",
+    "pricing": "Pricing",
+    "dashboard": "Dashboard",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register"
+  },
+  "lang": {
+    "en": "English",
+    "rw": "Kinyarwanda",
+    "switchTo": "Switch language"
+  },
+  "hero": {
+    "location": "Kigali & Beyond",
+    "title": "Discover Local Businesses with AI",
+    "subtitle": "Find restaurants, shops, services and more in your community — powered by intelligent recommendations.",
+    "searchPlaceholder": "Search businesses, categories...",
+    "search": "Search"
+  },
+  "ai": {
+    "title": "AI Recommendations",
+    "placeholder": "Tell us what you're looking for... e.g. 'healthy lunch near Remera'",
+    "recommend": "Recommend",
+    "thinking": "Thinking…"
+  },
+  "categories": {
+    "title": "Browse by Category",
+    "all": "All Categories",
+    "listed": "{{count}} listed",
+    "names": {
+      "Beauty & Personal Care": "Beauty & Personal Care",
+      "Car Wash": "Car Wash",
+      "Construction & Real Estate": "Construction & Real Estate",
+      "Education & Training": "Education & Training",
+      "Events & Entertainment": "Events & Entertainment",
+      "Finance & Insurance": "Finance & Insurance",
+      "Health & Wellness": "Health & Wellness",
+      "Hotels & Accommodation": "Hotels & Accommodation",
+      "Restaurants & Cafes": "Restaurants & Cafes",
+      "Retail & Shops": "Retail & Shops",
+      "Technology & IT": "Technology & IT",
+      "Transport & Logistics": "Transport & Logistics"
+    }
+  },
+  "featured": {
+    "title": "Featured Businesses",
+    "sponsored": "Sponsored"
+  },
+  "footer": {
+    "tagline": "AI-powered local business discovery for Kigali and beyond."
+  },
+  "pricing": {
+    "title": "Grow your business with SmartBiz Ads",
+    "subtitle": "Subscribe your business to a plan and rank higher when customers search and browse. Premium listings appear first, then Standard, then Basic — free listings follow.",
+    "choose": "Choose {{plan}}",
+    "perMonth": "/ month",
+    "bestVisibility": "Best visibility",
+    "plans": {
+      "basic": "Basic",
+      "standard": "Standard",
+      "premium": "Premium"
+    },
+    "taglines": {
+      "Get ahead of free listings": "Get ahead of free listings",
+      "Stand out in your category": "Stand out in your category",
+      "Top of every list": "Top of every list"
+    },
+    "features": {
+      "Ranked above all free listings": "Ranked above all free listings",
+      "Appears higher in search results": "Appears higher in search results",
+      "Standard business profile": "Standard business profile",
+      "Ranked above Basic and free listings": "Ranked above Basic and free listings",
+      "\"Sponsored\" badge on your listing": "\"Sponsored\" badge on your listing",
+      "Priority in category browsing": "Priority in category browsing",
+      "Top placement in all rankings": "Top placement in all rankings",
+      "Featured on the SmartBiz home page": "Featured on the SmartBiz home page",
+      "Highlighted listing card": "Highlighted listing card"
+    }
+  }
+}

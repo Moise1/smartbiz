@@ -42,8 +42,8 @@ npm run dev             # open http://localhost:5173
 | Role | Email | Password | Notes |
 |---|---|---|---|
 | **Super admin** | `admin@smartbiz.rw` | `Admin@SmartBiz1` | Only exists via seed — cannot be created from the Register page |
-| **Business owner (populated)** | `seed.owner@smartbiz.rw` | `SeedPass123!` | Owns all 90 seeded businesses — best for seeing a full dashboard |
-| **Business owners ×20** | Random per seed run, e.g. `aline.uwase@smartbiz.rw` | `OwnerPass123!` | Names are random Rwandan names; the seeder **prints every generated email** when it finishes (owners linked to businesses are marked). Only **5 random ones** are linked to businesses — an empty "My Businesses" list for the others is **expected, not a bug** |
+| **Business owner (populated)** | `seed.owner@gmail.com` | `SeedPass123!` | Owns all 90 seeded businesses — best for seeing a full dashboard |
+| **Business owners ×20** | Random per seed run, e.g. `aline.uwase@gmail.com` | `OwnerPass123!` | Names are random Rwandan names; the seeder **prints every generated email** when it finishes (owners linked to businesses are marked). Only **5 random ones** are linked to businesses — an empty "My Businesses" list for the others is **expected, not a bug** |
 | **Customer** | — | — | None is seeded; create one on `/register` (choose "Customer") |
 
 Login redirects by role: super admin → `/superadmin`, everyone else → `/dashboard`. Sessions are stored in the browser (localStorage), so a refresh keeps you logged in; clearing site data logs you out.
@@ -139,7 +139,7 @@ Good prompts to try: *"healthy lunch near Remera"*, *"hotel in Musanze for goril
 2. **As a visitor** — Home search suggestions → AI recommendations → a category tile → filters & pagination on `/businesses` → open a business → confirm the review form is absent.
 3. **Register a Customer** → leave a review → try a second review on the same business (expect rejection) → click a Pricing plan (expect the silent bounce to `/dashboard`) → type `/superadmin` (expect bounce back).
 4. **Register a Business Owner** → add a business → find it on `/businesses` → edit it → **subscribe it to Premium** → recheck `/businesses` and Home: it now has the green ring, "SPONSORED" pill, and top placement. Then delete a test business (remember: no confirmation).
-5. **Log in as `seed.owner@smartbiz.rw`** to see a dashboard populated with all 90 businesses.
+5. **Log in as `seed.owner@gmail.com`** to see a dashboard populated with all 90 businesses.
 6. **Log in as `admin@smartbiz.rw`** → manage businesses (search, paginate, edit) → Users (search, open a row modal) → Subscriptions (KPIs and donut charts — populated because of step 4).
 7. **Log out** — navbar reverts to Login/Register and protected URLs redirect to login.
 
