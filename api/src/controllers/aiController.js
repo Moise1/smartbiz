@@ -80,86 +80,114 @@ function scoreBusiness(b, preferences) {
   return score;
 }
 
-const BUSINESS_SELECT = `
-  SELECT b.name, b.description, b.city, b.address,
-         c.name AS category,
-         COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
-         COUNT(DISTINCT r.id) AS review_count
-  FROM businesses b
-  LEFT JOIN categories c ON c.id = b.category_id
-  LEFT JOIN reviews r ON r.business_id = b.id`;
+// Map the user's need to the category their results must belong to, so a
+// "restaurants in Remera" query pools only restaurants — not every business
+// in the area. Returns a case-insensitive pattern for `c.name ~* $n`, or null.
+function detectCategoryPattern(preferences = '') {
+  const prefs = preferences.toLowerCase();
+  for (const [needRe, catRe] of CATEGORY_HINTS) {
+    if (needRe.test(prefs)) return catRe.source;
+  }
+  return null;
+}
 
-const BUSINESS_TAIL = `
-  GROUP BY b.id, c.name
-  ORDER BY avg_rating DESC, review_count DESC
-  LIMIT 50`;
+// Append a category condition to a WHERE clause, pushing its param.
+function withCat(params, catPattern) {
+  if (!catPattern) return '';
+  params.push(catPattern);
+  return ` AND c.name ~* $${params.length}`;
+}
+
+// Run a pool query. `prefer` (optional) is a boolean SQL expression whose
+// TRUE rows sort first (used to rank exact-sector matches ahead of the rest).
+function poolQuery({ where, params, prefer }) {
+  const preferSelect = prefer ? `, (${prefer}) AS in_sector` : '';
+  const order = prefer ? 'in_sector DESC, ' : '';
+  return query(
+    `SELECT b.name, b.description, b.city, b.address, c.name AS category${preferSelect},
+            COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
+            COUNT(DISTINCT r.id) AS review_count
+     FROM businesses b
+     LEFT JOIN categories c ON c.id = b.category_id
+     LEFT JOIN reviews r ON r.business_id = b.id
+     WHERE ${where}
+     GROUP BY b.id, c.name
+     ORDER BY ${order}avg_rating DESC, review_count DESC
+     LIMIT 50`,
+    params
+  );
+}
 
 export async function getRecommendations(req, res, next) {
   try {
     const { preferences = '', city, limit = 5 } = req.body;
 
     // Location can arrive as an explicit `city` field or embedded in the
-    // preferences text ("healthy lunch near Remera").
+    // preferences text ("healthy lunch near Remera"). The requested category
+    // (restaurants, hotels, …) tightens the pool so results match the ask.
     const location = extractLocation(`${preferences} ${city || ''}`);
+    const catPattern = detectCategoryPattern(preferences);
 
     let businesses;
+    let locationApplied = Boolean(location);
+    let approximate = false;   // widened a named sector to its parent district
+    let areaLabel = null;      // the wider area a sector was widened to
+
     if (location === 'kigali') {
-      businesses = await query(
-        `${BUSINESS_SELECT}
-         WHERE b.is_active = true AND LOWER(b.city) = ANY($1)
-         ${BUSINESS_TAIL}`,
-        [KIGALI_DISTRICTS]
-      );
+      const params = [KIGALI_DISTRICTS];
+      const where = `b.is_active = true AND LOWER(b.city) = ANY($1)` + withCat(params, catPattern);
+      businesses = await poolQuery({ where, params });
     } else if (location && DISTRICT_SET.has(location)) {
-      businesses = await query(
-        `${BUSINESS_SELECT}
-         WHERE b.is_active = true AND b.city ILIKE $1
-         ${BUSINESS_TAIL}`,
-        [location]
-      );
+      const params = [location];
+      const where = `b.is_active = true AND b.city ILIKE $1` + withCat(params, catPattern);
+      businesses = await poolQuery({ where, params });
     } else if (location && KIGALI_SECTOR_DISTRICT[location]) {
-      // A Kigali sector (e.g. Remera): pool the whole parent district so
-      // every category is represented, ranking sector matches first.
-      businesses = await query(
-        `SELECT b.name, b.description, b.city, b.address,
-                c.name AS category,
-                (b.name ILIKE $2 OR b.description ILIKE $2 OR b.address ILIKE $2) AS in_sector,
-                COALESCE(AVG(r.rating), 0)::numeric(3,1) AS avg_rating,
-                COUNT(DISTINCT r.id) AS review_count
-         FROM businesses b
-         LEFT JOIN categories c ON c.id = b.category_id
-         LEFT JOIN reviews r ON r.business_id = b.id
-         WHERE b.is_active = true AND b.city ILIKE $1
-         GROUP BY b.id, c.name
-         ORDER BY in_sector DESC, avg_rating DESC, review_count DESC
-         LIMIT 50`,
-        [KIGALI_SECTOR_DISTRICT[location], `%${location}%`]
-      );
+      // Kigali sector (e.g. Remera): return businesses ACTUALLY in the sector
+      // first — those whose name/description/address names it. Only if none
+      // exist do we widen to the parent district (flagged as approximate).
+      const exactParams = [`%${location}%`];
+      const exactWhere =
+        `b.is_active = true AND (b.name ILIKE $1 OR b.description ILIKE $1 OR b.address ILIKE $1)` +
+        withCat(exactParams, catPattern);
+      businesses = await poolQuery({ where: exactWhere, params: exactParams });
+
+      if (businesses.rows.length === 0) {
+        const district = KIGALI_SECTOR_DISTRICT[location];
+        const params = [district, `%${location}%`];
+        const where = `b.is_active = true AND b.city ILIKE $1` + withCat(params, catPattern);
+        businesses = await poolQuery({
+          where,
+          params,
+          prefer: `b.name ILIKE $2 OR b.description ILIKE $2 OR b.address ILIKE $2`,
+        });
+        approximate = true;
+        areaLabel = district;
+      }
     } else if (location) {
-      // A sector outside Kigali — no district mapping, match it against
-      // city, address, name, and description text.
-      businesses = await query(
-        `${BUSINESS_SELECT}
-         WHERE b.is_active = true AND (
-           b.city ILIKE $1 OR b.address ILIKE $2 OR
-           b.name ILIKE $2 OR b.description ILIKE $2
-         )
-         ${BUSINESS_TAIL}`,
-        [location, `%${location}%`]
-      );
+      // A sector outside Kigali — match it against city, address, name, and
+      // description text. Exact only; no district mapping to widen to.
+      const params = [location, `%${location}%`];
+      const where =
+        `b.is_active = true AND (b.city ILIKE $1 OR b.address ILIKE $2 OR b.name ILIKE $2 OR b.description ILIKE $2)` +
+        withCat(params, catPattern);
+      businesses = await poolQuery({ where, params });
     } else {
-      businesses = await query(
-        `${BUSINESS_SELECT} WHERE b.is_active = true ${BUSINESS_TAIL}`
-      );
+      const params = [];
+      const where = `b.is_active = true` + withCat(params, catPattern);
+      businesses = await poolQuery({ where, params });
     }
 
-    // If no location-specific results, fetch top businesses globally
-    let usedFallback = false;
-    if (businesses.rows.length === 0) {
-      usedFallback = true;
-      businesses = await query(
-        `${BUSINESS_SELECT} WHERE b.is_active = true ${BUSINESS_TAIL}`
-      );
+    // Spill over to top businesses globally ONLY for a general query (no
+    // location named). When the user named a place we keep results exact —
+    // an empty pool yields an honest "nothing here" rather than unrelated
+    // businesses from across the country.
+    if (businesses.rows.length === 0 && !locationApplied) {
+      const params = [];
+      const where = `b.is_active = true` + withCat(params, catPattern);
+      businesses = await poolQuery({ where, params });
+      if (businesses.rows.length === 0) {
+        businesses = await poolQuery({ where: 'b.is_active = true', params: [] });
+      }
     }
 
     const pool = dedupe(businesses.rows);
@@ -178,8 +206,9 @@ ${pool.map((b, i) =>
 ).join('\n')}
 
 Recommend up to ${limit} businesses. Rules:
-- The TYPE of business must match the user's need first: a food request must only return restaurants/cafes, an accommodation request only hotels, and so on.${location && !usedFallback ? `
-- Among matching businesses, prefer those located in or nearest to ${locationLabel}.` : ''}
+- The TYPE of business must match the user's need first: a food request must only return restaurants/cafes, an accommodation request only hotels, and so on.${locationApplied && !approximate ? `
+- Every business in the list is located in ${locationLabel}. Recommend ONLY businesses from this list that match the user's need — do not suggest anywhere outside ${locationLabel}.` : ''}${approximate ? `
+- The user asked for ${locationLabel}, but no business is listed exactly there. The list covers the surrounding ${areaLabel} area — recommend the closest matches and make clear in the reason that they are in ${areaLabel}, near ${locationLabel}.` : ''}
 - If only a few businesses genuinely match, return only those. Never pad the list with unrelated businesses. If nothing matches, return [].
 - Never recommend the same business twice.
 Return ONLY a valid JSON array of objects with fields: name (string), reason (string, 1 sentence).

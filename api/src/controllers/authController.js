@@ -10,9 +10,11 @@ function signToken(user) {
   );
 }
 
+// Public self-registration always creates a customer account. Business-owner
+// accounts are created by an admin (see createBusinessOwner) — never here.
 export async function register(req, res, next) {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password } = req.body;
 
     const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
@@ -22,13 +24,37 @@ export async function register(req, res, next) {
     const passwordHash = await bcrypt.hash(password, 12);
     const result = await query(
       `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+       VALUES ($1, $2, $3, 'user')
        RETURNING id, name, email, role, created_at`,
-      [name, email, passwordHash, role === 'business_owner' ? 'business_owner' : 'user']
+      [name, email, passwordHash]
     );
 
     const user = result.rows[0];
     res.status(201).json({ token: signToken(user), user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Admin-only: create a new business-owner account.
+export async function createBusinessOwner(req, res, next) {
+  try {
+    const { name, email, password } = req.body;
+
+    const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'Email already in use' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const result = await query(
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ($1, $2, $3, 'business_owner')
+       RETURNING id, name, email, role, created_at`,
+      [name, email, passwordHash]
+    );
+
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     next(err);
   }

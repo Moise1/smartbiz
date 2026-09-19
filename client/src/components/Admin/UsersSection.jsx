@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Building2, Search, Star, Users as UsersIcon, X } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Building2, Search, Star, Users as UsersIcon, X, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client.js';
 
@@ -12,8 +12,10 @@ const ROLE_STYLES = {
 const ROLE_LABELS = { admin: 'Admin', business_owner: 'Business owner', user: 'Customer' };
 
 export default function UsersSection() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -46,16 +48,24 @@ export default function UsersSection() {
             {q && filtered ? ` · ${filtered.length} matching` : ''}
           </p>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or role…"
-            className="input pl-9"
-          />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, email, or role…"
+              className="input pl-9"
+            />
+          </div>
+          <button onClick={() => setShowAdd(true)} className="btn-primary whitespace-nowrap">
+            <UserPlus className="w-4 h-4" />
+            Add Business Owner
+          </button>
         </div>
       </div>
+
+      {showAdd && <AddOwnerModal onClose={() => setShowAdd(false)} qc={qc} />}
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -201,5 +211,85 @@ export default function UsersSection() {
         </div>
       )}
     </section>
+  );
+}
+
+function AddOwnerModal({ onClose, qc }) {
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [created, setCreated] = useState(null);
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/users/business-owners', form),
+    onSuccess: (user) => {
+      setCreated(user);
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+    },
+  });
+
+  function errorText(err) {
+    if (Array.isArray(err?.errors) && err.errors.length) return err.errors.map((e) => e.msg).join('. ');
+    return err?.message || 'Could not create the account.';
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="card w-full max-w-md p-6 relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" title="Close">
+          <X className="w-5 h-5" />
+        </button>
+
+        {created ? (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center mx-auto mb-3">
+              <UserPlus className="w-6 h-6" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Business owner created</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              <span className="font-medium text-gray-700">{created.name}</span> can now sign in with{' '}
+              <span className="font-medium text-gray-700">{created.email}</span> and the password you set.
+            </p>
+            <button onClick={onClose} className="btn-primary mt-5 justify-center">Done</button>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-brand-500" />
+              Add Business Owner
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Create a business-owner account. They can then list and manage their businesses.
+            </p>
+            <form
+              onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+                <input required value={form.name} onChange={set('name')} className="input" placeholder="Jane Uwase" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" required value={form.email} onChange={set('email')} className="input" placeholder="owner@example.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Temporary password</label>
+                <input type="text" required minLength={6} value={form.password} onChange={set('password')} className="input" placeholder="Min. 6 characters" />
+                <p className="text-xs text-gray-400 mt-1">Share this with the owner so they can sign in.</p>
+              </div>
+              {mutation.error && (
+                <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorText(mutation.error)}</p>
+              )}
+              <div className="flex gap-3">
+                <button type="submit" disabled={mutation.isPending} className="btn-primary flex-1 justify-center">
+                  {mutation.isPending ? 'Creating…' : 'Create account'}
+                </button>
+                <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

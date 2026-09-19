@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
+  const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -34,8 +34,8 @@ export default function Register() {
             <MapPin className="w-6 h-6" />
             SmartBiz
           </div>
-          <h1 className="text-xl font-semibold text-gray-900">Create an account</h1>
-          <p className="text-sm text-gray-500 mt-1">Join the local business community</p>
+          <h1 className="text-xl font-semibold text-gray-900">Create a customer account</h1>
+          <p className="text-sm text-gray-500 mt-1">Discover and review local businesses</p>
         </div>
 
         <div className="card p-8">
@@ -76,13 +76,6 @@ export default function Register() {
                 placeholder="Min. 6 characters"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-              <select value={form.role} onChange={set('role')} className="input">
-                <option value="user">Customer — find local businesses</option>
-                <option value="business_owner">Business Owner — list my business</option>
-              </select>
-            </div>
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
@@ -90,6 +83,10 @@ export default function Register() {
           <p className="text-sm text-center text-gray-500 mt-4">
             Already have an account?{' '}
             <Link to="/login" className="text-brand-600 hover:underline font-medium">Sign in</Link>
+          </p>
+          <p className="text-xs text-center text-gray-400 mt-3">
+            Are you a business owner? Business accounts are created by the SmartBiz team —{' '}
+            <Link to="/contact" className="text-brand-600 hover:underline">contact us</Link> to get listed.
           </p>
         </div>
       </div>

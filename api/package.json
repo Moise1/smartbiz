@@ -24,6 +24,7 @@
     "express-validator": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
+    "nodemailer": "^10.0.10",
     "pg": "^8.12.0",
     "rwanda": "^3.0.2"
   },

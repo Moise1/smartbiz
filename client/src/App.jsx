@@ -7,6 +7,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Pricing from './pages/Pricing.jsx';
+import Contact from './pages/Contact.jsx';
 import Subscribe from './pages/Subscribe.jsx';
 import SuperAdminDashboard from './pages/SuperAdminDashboard.jsx';
 import PrivateRoute from './components/PrivateRoute.jsx';
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="pricing" element={<Pricing />} />
+        <Route path="contact" element={<Contact />} />
         <Route path="subscribe" element={<PrivateRoute><Subscribe /></PrivateRoute>} />
         <Route path="dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="superadmin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />

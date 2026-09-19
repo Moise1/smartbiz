@@ -44,7 +44,7 @@ npm run dev             # open http://localhost:5173
 | **Super admin** | `admin@smartbiz.rw` | `Admin@SmartBiz1` | Only exists via seed — cannot be created from the Register page |
 | **Business owner (populated)** | `seed.owner@gmail.com` | `SeedPass123!` | Owns all 90 seeded businesses — best for seeing a full dashboard |
 | **Business owners ×20** | Random per seed run, e.g. `aline.uwase@gmail.com` | `OwnerPass123!` | Names are random Rwandan names; the seeder **prints every generated email** when it finishes (owners linked to businesses are marked). Only **5 random ones** are linked to businesses — an empty "My Businesses" list for the others is **expected, not a bug** |
-| **Customer** | — | — | None is seeded; create one on `/register` (choose "Customer") |
+| **Customer** | — | — | None is seeded; self-register on `/register` (registration always creates a customer) |
 
 Login redirects by role: super admin → `/superadmin`, everyone else → `/dashboard`. Sessions are stored in the browser (localStorage), so a refresh keeps you logged in; clearing site data logs you out.
 
@@ -71,7 +71,7 @@ Business owners pay (simulated) monthly plans that boost visibility everywhere:
 
 Ranking order everywhere: **Premium → Standard → Basic → free**, then verified status, then star rating. Plans last **30 days**; an expired plan silently ranks as free again (badges disappear — worth knowing on an old test database).
 
-**Payment is simulated** — the Subscribe page says so on-screen. Confirming activates the plan instantly; there is no card form.
+**Payment is simulated** — the Subscribe page has a MoMo/VISA checkout, but no real charge is made. Confirming records a masked payment reference and activates the plan instantly.
 
 ---
 
@@ -93,7 +93,10 @@ Ranking order everywhere: **Premium → Standard → Basic → free**, then veri
 Photo, verified check, rating, description, tap-to-call phone, email, and website links. **Reviews:** logged-in users get a 5-star picker + comment form (both required). A second review of the same business is rejected with *"You already reviewed this business."*
 
 ### Register (`/register`) & Login (`/login`)
-Registration asks for name, email, password (min 6 chars) and — most importantly — an **Account Type**: *Customer* or *Business Owner*. That choice determines everything you can do afterwards. No email verification; you're logged in immediately.
+Public registration creates a **customer** account only (name, email, password — min 6 chars). No email verification; you're logged in immediately. **Business-owner accounts are created by an admin**, not self-registered — see the admin Users section below. The register page points would-be owners to the Contact page.
+
+### Contact (`/contact`)
+An info / "contact us" page in the top navbar with SmartBiz's phone, office, and hours, plus a message form. Submitting posts to `POST /api/contact`, which **emails the message to the SmartBiz inbox** (`CONTACT_TO`, default `nuby.chartine@gmail.com`). Real delivery needs SMTP credentials in `api/.env` (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, etc. — for Gmail use an app password); without them the message is logged server-side and the form still confirms receipt.
 
 ### Top bar (logged in)
 Once logged in, the Home / Businesses / Pricing menu disappears (it's for the landing pages only) and the top bar shows just a **round profile button with your initials**. Clicking it opens a card with your name, email, role badge, a **Dashboard** link for the roles that have one (Super Admin → `/superadmin`, Business Owner → `/dashboard`; customers see no dashboard link), and a **Logout** button.
@@ -112,13 +115,13 @@ The three plan cards. "Choose plan" behaviour depends on who you are:
 - Logged out → sent to login, and after logging in you land on `/dashboard`, **not** back on the plan — go back to Pricing yourself.
 
 ### Subscribe (`/subscribe`)
-Three steps: **pick a business** (or register one right in the form), **pick a plan**, **confirm**. Success shows a green banner, and your **Active subscriptions** list below. Customers see a "Business owners only" dead end here.
+Four steps: **pick a business** (or register one right in the form), **pick a plan**, **choose a payment method**, **confirm**. Payment offers **Mobile Money** (enter a MoMo phone number) or **VISA / Card** (card number, expiry MM/YY, CVV); the Confirm button stays disabled until the details are valid and reads "Pay N RWF". **Payment is simulated** — no real charge is made; confirming records a masked reference (e.g. `MoMo 078****456` or `VISA ****4242`) and activates the plan instantly. Success shows a green banner with that reference, and your **Active subscriptions** list below shows how each was paid. Customers see a "Business owners only" dead end here.
 
 ### Super Admin (`/superadmin`)
 A left icon rail (expands on hover) with four sections:
 - **Businesses** — searchable, paginated table of all ~90+ businesses (10/page) with add/edit/delete. The Verified column is a green/grey dot — **read-only in the UI** (changeable only in the DB). Delete has no confirm here either.
 - **Categories** — every business across all categories, shown as cards grouped by category, with a search box and category filter (paginated). Hovering a card's cover reveals two controls: **upload** (replace the cover photo — the new image immediately shows on the landing page and everywhere the business appears) and **delete** (removes the business, with a confirmation prompt).
-- **Users** — every account with role badges (purple = admin, green = owner, grey = customer). **Click any row** for a modal showing that user's businesses, plans and ratings.
+- **Users** — every account with role badges (purple = admin, green = owner, grey = customer). **Click any row** for a modal showing that user's businesses, plans and ratings. An **Add Business Owner** button creates a business-owner account (name, email, temporary password) — this is the only way business owners are created.
 - **Subscriptions** — KPI tiles (active subs, monthly & all-time revenue), two **hover-interactive donut charts** by plan, a breakdown table, and the 10 most recent subscriptions. Empty until at least one business subscribes — so test subscribing first.
 
 The super admin reaches `/superadmin` via the **Dashboard link in the profile menu** (top-right initials button), which always points back to the admin area.
@@ -127,7 +130,7 @@ The super admin reaches `/superadmin` via the **Dashboard link in the profile me
 
 ## 6. The AI part
 
-Home-page recommendations use **Google Gemini** (key: `SMARTBIZ_GEMINI_API_KEY` in `api/.env`) with Rwandan location awareness — it recognizes districts and Kigali sectors ("Remera" pools the whole Gasabo district but ranks sector matches first; "Kigali" spans all three Kigali districts).
+Home-page recommendations use **Google Gemini** (key: `SMARTBIZ_GEMINI_API_KEY` in `api/.env`) with Rwandan location awareness — it recognizes districts and Kigali sectors. Results are **location- and category-exact**: the pool is filtered by the requested type (e.g. "restaurants" only returns Restaurants & Cafes), and by location — naming a **district** ("Musanze", "Kicukiro") returns only that district, and naming a **Kigali sector** ("Remera") returns businesses **actually in that sector first**; only if none exist does it widen to the parent district and say so ("in Gasabo, near Remera"). A named place that has no matches returns an empty result rather than spilling over to unrelated businesses country-wide.
 
 **If the key is missing or over quota, it silently falls back** to a built-in keyword ranker — recommendations still appear, so their presence doesn't prove Gemini works. The tell: real AI gives natural sentences as reasons; the fallback gives the template *"Restaurants & Cafes in Gasabo — rated 4.5/5."* (The API logs `AI recommendation fallback: …` when degraded.)
 
@@ -140,7 +143,7 @@ Good prompts to try: *"healthy lunch near Remera"*, *"hotel in Musanze for goril
 1. **Setup** — migrate, run both seeds, confirm `PORT=5002`.
 2. **As a visitor** — Home search suggestions → AI recommendations → a category tile → filters & pagination on `/businesses` → open a business → confirm the review form is absent.
 3. **Register a Customer** → leave a review → try a second review on the same business (expect rejection) → click a Pricing plan (expect the silent bounce to `/dashboard`) → type `/superadmin` (expect bounce back).
-4. **Register a Business Owner** → add a business → find it on `/businesses` → edit it → **subscribe it to Premium** → recheck `/businesses` and Home: it now has the green ring, "SPONSORED" pill, and top placement. Then delete a test business (remember: no confirmation).
+4. **As the admin, create a Business Owner** (Users → Add Business Owner), then log in as them → add a business → find it on `/businesses` → edit it → **subscribe it to Premium** (choose MoMo or VISA at checkout — payment is simulated) → recheck `/businesses` and Home: it now has the green ring, "SPONSORED" pill, and top placement.
 5. **Log in as `seed.owner@gmail.com`** to see a dashboard populated with all 90 businesses.
 6. **Log in as `admin@smartbiz.rw`** → manage businesses (search, paginate, edit) → Users (search, open a row modal) → Subscriptions (KPIs and donut charts — populated because of step 4).
 7. **Log out** — navbar reverts to Login/Register and protected URLs redirect to login.

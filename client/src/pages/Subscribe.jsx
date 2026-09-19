@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, Building2, CreditCard, Crown, Plus, Rocket, TrendingUp } from 'lucide-react';
+import { BadgeCheck, Building2, CreditCard, Crown, Plus, Rocket, Smartphone, TrendingUp } from 'lucide-react';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -16,6 +16,14 @@ export default function Subscribe() {
   const [success, setSuccess] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
   const [newBiz, setNewBiz] = useState({ name: '', description: '', category_id: '', city: 'Kigali' });
+  const [payMethod, setPayMethod] = useState('momo');
+  const [momoPhone, setMomoPhone] = useState('');
+  const [card, setCard] = useState({ card_number: '', expiry: '', cvv: '' });
+
+  const digits = (s) => String(s || '').replace(/\D/g, '');
+  const paymentValid = payMethod === 'momo'
+    ? digits(momoPhone).length >= 10
+    : digits(card.card_number).length >= 13 && /^\d{2}\/\d{2}$/.test(card.expiry) && /^\d{3,4}$/.test(card.cvv);
 
   const isOwner = user?.role === 'business_owner' || user?.role === 'admin';
 
@@ -53,9 +61,16 @@ export default function Subscribe() {
   });
 
   const subscribeMutation = useMutation({
-    mutationFn: () => api.post('/subscriptions', { business_id: Number(businessId), plan: planId }),
+    mutationFn: () => api.post('/subscriptions', {
+      business_id: Number(businessId),
+      plan: planId,
+      payment_method: payMethod,
+      payment_details: payMethod === 'momo' ? { phone: momoPhone } : card,
+    }),
     onSuccess: (data) => {
-      setSuccess(data.message);
+      setSuccess(
+        data.payment_reference ? `${data.message} · Paid with ${data.payment_reference}` : data.message
+      );
       qc.invalidateQueries({ queryKey: ['my-subscriptions'] });
       qc.invalidateQueries({ queryKey: ['my-businesses'] });
       qc.invalidateQueries({ queryKey: ['businesses'] });
@@ -204,7 +219,77 @@ export default function Subscribe() {
           })}
         </div>
 
-        {/* Step 3: confirm */}
+        {/* Step 3: payment */}
+        <label className="block text-sm font-semibold text-gray-800 mb-2">3. Payment</label>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <button
+            type="button"
+            onClick={() => { setPayMethod('momo'); setSuccess(null); }}
+            className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-colors text-sm font-medium ${
+              payMethod === 'momo' ? 'border-brand-500 bg-brand-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <Smartphone className={`w-4 h-4 ${payMethod === 'momo' ? 'text-brand-600' : 'text-gray-400'}`} />
+            Mobile Money
+          </button>
+          <button
+            type="button"
+            onClick={() => { setPayMethod('card'); setSuccess(null); }}
+            className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-colors text-sm font-medium ${
+              payMethod === 'card' ? 'border-brand-500 bg-brand-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <CreditCard className={`w-4 h-4 ${payMethod === 'card' ? 'text-brand-600' : 'text-gray-400'}`} />
+            VISA / Card
+          </button>
+        </div>
+
+        {payMethod === 'momo' ? (
+          <div className="mb-5">
+            <label className="block text-xs font-medium text-gray-600 mb-1">MoMo phone number</label>
+            <input
+              value={momoPhone}
+              onChange={(e) => { setMomoPhone(e.target.value); setSuccess(null); }}
+              inputMode="tel"
+              className="input"
+              placeholder="078 8 123 456"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Card number</label>
+              <input
+                value={card.card_number}
+                onChange={(e) => { setCard((c) => ({ ...c, card_number: e.target.value })); setSuccess(null); }}
+                inputMode="numeric"
+                className="input"
+                placeholder="4242 4242 4242 4242"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Expiry (MM/YY)</label>
+              <input
+                value={card.expiry}
+                onChange={(e) => { setCard((c) => ({ ...c, expiry: e.target.value })); setSuccess(null); }}
+                className="input"
+                placeholder="12/28"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">CVV</label>
+              <input
+                value={card.cvv}
+                onChange={(e) => { setCard((c) => ({ ...c, cvv: e.target.value })); setSuccess(null); }}
+                inputMode="numeric"
+                className="input"
+                placeholder="123"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: confirm */}
         <div className="flex items-center justify-between border-t border-gray-100 pt-5">
           <div className="text-sm text-gray-600">
             {selectedPlan && (
@@ -218,15 +303,20 @@ export default function Subscribe() {
           </div>
           <button
             onClick={() => subscribeMutation.mutate()}
-            disabled={!businessId || !planId || subscribeMutation.isPending}
+            disabled={!businessId || !planId || !paymentValid || subscribeMutation.isPending}
             className="btn-primary disabled:opacity-50"
           >
             <CreditCard className="w-4 h-4" />
-            {subscribeMutation.isPending ? 'Processing…' : 'Confirm subscription'}
+            {subscribeMutation.isPending
+              ? 'Processing payment…'
+              : selectedPlan
+                ? `Pay ${selectedPlan.price_rwf.toLocaleString()} RWF`
+                : 'Confirm subscription'}
           </button>
         </div>
         <p className="text-xs text-gray-400 mt-3">
-          Payment is simulated in this version — confirming activates the plan immediately.
+          Payment is simulated in this version — no real charge is made. Confirming records the
+          payment and activates the plan immediately.
         </p>
         {subscribeMutation.error && (
           <p className="mt-3 text-sm text-red-500">
@@ -248,6 +338,9 @@ export default function Subscribe() {
                     {s.plan} · {s.amount_rwf.toLocaleString()} RWF · expires{' '}
                     {new Date(s.expires_at).toLocaleDateString()}
                   </p>
+                  {s.payment_reference && (
+                    <p className="text-xs text-gray-400 normal-case mt-0.5">Paid with {s.payment_reference}</p>
+                  )}
                 </div>
                 <span className="text-xs bg-brand-50 text-brand-700 px-2.5 py-1 rounded-full font-medium capitalize">
                   {s.plan}

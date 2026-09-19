@@ -16,6 +16,7 @@ router.post(
   [
     body('business_id').isInt().withMessage('business_id is required'),
     body('plan').isIn(['basic', 'standard', 'premium']).withMessage('Choose a valid plan'),
+    body('payment_method').isIn(['momo', 'card']).withMessage('Choose a payment method: MoMo or card'),
     validate,
   ],
   subscribe

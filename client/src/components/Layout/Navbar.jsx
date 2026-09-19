@@ -29,6 +29,9 @@ export default function Navbar() {
             <NavLink to="/pricing" className={({ isActive }) => isActive ? 'text-brand-600' : 'hover:text-gray-900'}>
               {t('nav.pricing')}
             </NavLink>
+            <NavLink to="/contact" className={({ isActive }) => isActive ? 'text-brand-600' : 'hover:text-gray-900'}>
+              {t('nav.contact')}
+            </NavLink>
           </nav>
         )}
 

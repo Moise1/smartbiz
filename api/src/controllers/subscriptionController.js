@@ -5,14 +5,40 @@ export function getPlans(_req, res) {
   res.json(Object.values(PLANS));
 }
 
+// Build a masked, human-readable payment reference from the (simulated)
+// payment details. Only the masked form is ever stored — never the full
+// card number or phone.
+function buildPaymentReference(method, details = {}) {
+  if (method === 'momo') {
+    const phone = String(details.phone || '').replace(/\D/g, '');
+    if (phone.length < 9) return { error: 'Enter a valid MoMo phone number.' };
+    const masked = `${phone.slice(0, 3)}****${phone.slice(-3)}`;
+    return { reference: `MoMo ${masked}` };
+  }
+  if (method === 'card') {
+    const number = String(details.card_number || '').replace(/\D/g, '');
+    if (number.length < 13) return { error: 'Enter a valid card number.' };
+    if (!/^\d{2}\/\d{2}$/.test(String(details.expiry || ''))) return { error: 'Enter a valid card expiry (MM/YY).' };
+    if (!/^\d{3,4}$/.test(String(details.cvv || ''))) return { error: 'Enter a valid card CVV.' };
+    return { reference: `VISA ****${number.slice(-4)}` };
+  }
+  return { error: 'Choose a payment method: MoMo or card.' };
+}
+
 export async function subscribe(req, res, next) {
   const client = await getClient();
   try {
-    const { business_id, plan } = req.body;
+    const { business_id, plan, payment_method, payment_details } = req.body;
 
     const planDef = PLANS[plan];
     if (!planDef) {
       return res.status(400).json({ message: 'Unknown plan. Choose basic, standard, or premium.' });
+    }
+
+    // Simulated checkout — validate details and produce a masked reference.
+    const payment = buildPaymentReference(payment_method, payment_details);
+    if (payment.error) {
+      return res.status(400).json({ message: payment.error });
     }
 
     const owned = await client.query(
@@ -35,10 +61,10 @@ export async function subscribe(req, res, next) {
     // Payment is simulated for now — record the subscription and activate it.
     const expiresAt = new Date(Date.now() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000);
     const sub = await client.query(
-      `INSERT INTO subscriptions (business_id, user_id, plan, amount_rwf, expires_at)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO subscriptions (business_id, user_id, plan, amount_rwf, expires_at, payment_method, payment_reference)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [business_id, req.user.id, plan, planDef.price_rwf, expiresAt]
+      [business_id, req.user.id, plan, planDef.price_rwf, expiresAt, payment_method, payment.reference]
     );
 
     await client.query(
@@ -50,6 +76,7 @@ export async function subscribe(req, res, next) {
 
     res.status(201).json({
       message: `${business.name} is now on the ${planDef.name} plan`,
+      payment_reference: payment.reference,
       subscription: sub.rows[0],
     });
   } catch (err) {
@@ -93,6 +120,7 @@ export async function getMySubscriptions(req, res, next) {
   try {
     const result = await query(
       `SELECT s.id, s.business_id, s.plan, s.amount_rwf, s.starts_at, s.expires_at,
+              s.payment_method, s.payment_reference,
               b.name AS business_name,
               (s.expires_at > NOW() AND b.plan = s.plan) AS is_current
        FROM subscriptions s

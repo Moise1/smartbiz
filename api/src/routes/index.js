@@ -6,6 +6,7 @@ import reviewRoutes from './reviews.js';
 import aiRoutes from './ai.js';
 import subscriptionRoutes from './subscriptions.js';
 import userRoutes from './users.js';
+import contactRoutes from './contact.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/categories', categoryRoutes);
 router.use('/ai', aiRoutes);
 router.use('/subscriptions', subscriptionRoutes);
 router.use('/users', userRoutes);
+router.use('/contact', contactRoutes);
 
 export default router;
