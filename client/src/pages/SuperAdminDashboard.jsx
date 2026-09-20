@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Plus, Building2, Star, Edit, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ShieldCheck, Building2, Star, Edit, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -105,15 +105,10 @@ export default function SuperAdminDashboard() {
             <span className="text-xs font-semibold uppercase tracking-widest text-brand-600">Super Admin</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Business Management</h1>
-          <p className="text-gray-500 text-sm mt-1">Welcome, {user?.name}</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Welcome, {user?.name}. New businesses are added when you create a business owner.
+          </p>
         </div>
-        <button
-          onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm()); }}
-          className="btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Add Business
-        </button>
       </div>
 
       {/* Add / Edit Form */}

@@ -16,6 +16,9 @@ if (mailerConfigured) {
     port: Number(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    // Some hosts (e.g. Render) have no working IPv6 route out — Gmail's SMTP
+    // resolves to IPv6 and the connection fails with ENETUNREACH. Force IPv4.
+    family: 4,
   });
 }
 

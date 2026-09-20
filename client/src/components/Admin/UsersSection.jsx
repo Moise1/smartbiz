@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Search, Star, Users as UsersIcon, X, UserPlus } from 'lucide-react';
+import { Building2, Search, Star, Users as UsersIcon, X, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client.js';
 
@@ -16,11 +16,29 @@ export default function UsersSection() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => api.get('/users'),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/users/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+    onError: (err) => setActionError(err?.message || 'Could not delete the user.'),
+  });
+
+  function handleDelete(u) {
+    setActionError(null);
+    const extra = u.business_count > 0
+      ? ` This also deletes their ${u.business_count} business${u.business_count === 1 ? '' : 'es'}.`
+      : '';
+    if (window.confirm(`Delete ${u.name}?${extra} This cannot be undone.`)) {
+      deleteMutation.mutate(u.id);
+    }
+  }
 
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ['admin-user', selectedId],
@@ -66,6 +84,11 @@ export default function UsersSection() {
       </div>
 
       {showAdd && <AddOwnerModal onClose={() => setShowAdd(false)} qc={qc} />}
+      {editUser && <EditUserModal user={editUser} onClose={() => setEditUser(null)} qc={qc} />}
+
+      {actionError && (
+        <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{actionError}</p>
+      )}
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -78,13 +101,14 @@ export default function UsersSection() {
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3 text-right">Businesses</th>
                 <th className="px-4 py-3 text-right">Joined</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-4 bg-gray-100 rounded animate-pulse" />
                       </td>
@@ -93,7 +117,7 @@ export default function UsersSection() {
                 ))
               ) : filtered?.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                     <UsersIcon className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     {q ? <>No users match “{search}”.</> : 'No users yet.'}
                   </td>
@@ -115,6 +139,26 @@ export default function UsersSection() {
                   <td className="px-4 py-3 text-right tabular-nums text-gray-700">{u.business_count}</td>
                   <td className="px-4 py-3 text-right text-gray-500 whitespace-nowrap">
                     {new Date(u.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActionError(null); setEditUser(u); }}
+                        disabled={u.is_superadmin}
+                        className="btn-secondary py-1 px-2.5 disabled:opacity-40"
+                        title={u.is_superadmin ? 'The super admin cannot be edited' : 'Edit user'}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(u); }}
+                        disabled={deleteMutation.isPending || u.is_superadmin}
+                        className="btn-secondary py-1 px-2.5 text-red-500 hover:bg-red-50 disabled:opacity-40"
+                        title={u.is_superadmin ? 'The super admin cannot be deleted' : 'Delete user'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -216,14 +260,23 @@ export default function UsersSection() {
 
 function AddOwnerModal({ onClose, qc }) {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [business, setBusiness] = useState({ name: '', description: '', category_id: '', city: 'Kigali' });
   const [created, setCreated] = useState(null);
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+  const setBiz = (field) => (e) => setBusiness((b) => ({ ...b, [field]: e.target.value }));
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.get('/categories'),
+  });
 
   const mutation = useMutation({
-    mutationFn: () => api.post('/users/business-owners', form),
+    mutationFn: () => api.post('/users/business-owners', { ...form, business }),
     onSuccess: (user) => {
       setCreated(user);
       qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['all-businesses-admin'] });
+      qc.invalidateQueries({ queryKey: ['businesses'] });
     },
   });
 
@@ -234,7 +287,7 @@ function AddOwnerModal({ onClose, qc }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="card w-full max-w-md p-6 relative" onClick={(e) => e.stopPropagation()}>
+      <div className="card w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 relative" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" title="Close">
           <X className="w-5 h-5" />
         </button>
@@ -248,6 +301,9 @@ function AddOwnerModal({ onClose, qc }) {
             <p className="text-sm text-gray-500 mt-1">
               <span className="font-medium text-gray-700">{created.name}</span> can now sign in with{' '}
               <span className="font-medium text-gray-700">{created.email}</span> and the password you set.
+              {created.business && (
+                <> Their business <span className="font-medium text-gray-700">{created.business.name}</span> was created and linked to them.</>
+              )}
             </p>
             <button onClick={onClose} className="btn-primary mt-5 justify-center">Done</button>
           </div>
@@ -258,12 +314,13 @@ function AddOwnerModal({ onClose, qc }) {
               Add Business Owner
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Create a business-owner account. They can then list and manage their businesses.
+              Create a business-owner account and their first business — both are created together.
             </p>
             <form
               onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
               className="space-y-4"
             >
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Owner</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
                 <input required value={form.name} onChange={set('name')} className="input" placeholder="Jane Uwase" />
@@ -277,18 +334,102 @@ function AddOwnerModal({ onClose, qc }) {
                 <input type="text" required minLength={6} value={form.password} onChange={set('password')} className="input" placeholder="Min. 6 characters" />
                 <p className="text-xs text-gray-400 mt-1">Share this with the owner so they can sign in.</p>
               </div>
+
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-2">Their business</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business name</label>
+                <input required value={business.name} onChange={setBiz('name')} className="input" placeholder="e.g. Kigali Coffee House" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea required rows={2} value={business.description} onChange={setBiz('description')} className="input resize-none" placeholder="Describe the business…" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select required value={business.category_id} onChange={setBiz('category_id')} className="input">
+                    <option value="">Select category</option>
+                    {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City / District</label>
+                  <input required value={business.city} onChange={setBiz('city')} className="input" placeholder="e.g. Gasabo" />
+                </div>
+              </div>
+
               {mutation.error && (
                 <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorText(mutation.error)}</p>
               )}
               <div className="flex gap-3">
                 <button type="submit" disabled={mutation.isPending} className="btn-primary flex-1 justify-center">
-                  {mutation.isPending ? 'Creating…' : 'Create account'}
+                  {mutation.isPending ? 'Creating…' : 'Create owner & business'}
                 </button>
                 <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
               </div>
             </form>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function EditUserModal({ user, onClose, qc }) {
+  const [form, setForm] = useState({ name: user.name, email: user.email, role: user.role });
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const mutation = useMutation({
+    mutationFn: () => api.put(`/users/${user.id}`, form),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-user', user.id] });
+      onClose();
+    },
+  });
+
+  function errorText(err) {
+    if (Array.isArray(err?.errors) && err.errors.length) return err.errors.map((e) => e.msg).join('. ');
+    return err?.message || 'Could not update the user.';
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="card w-full max-w-md p-6 relative" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" title="Close">
+          <X className="w-5 h-5" />
+        </button>
+        <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <Pencil className="w-5 h-5 text-brand-500" />
+          Edit user
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">Update this user's details and role.</p>
+        <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+            <input required value={form.name} onChange={set('name')} className="input" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" required value={form.email} onChange={set('email')} className="input" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select value={form.role} onChange={set('role')} className="input">
+              <option value="user">Customer</option>
+              <option value="business_owner">Business owner</option>
+            </select>
+          </div>
+          {mutation.error && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorText(mutation.error)}</p>
+          )}
+          <div className="flex gap-3">
+            <button type="submit" disabled={mutation.isPending} className="btn-primary flex-1 justify-center">
+              {mutation.isPending ? 'Saving…' : 'Save changes'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   );

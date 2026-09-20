@@ -80,5 +80,21 @@
       "Featured on the SmartBiz home page": "Featured on the SmartBiz home page",
       "Highlighted listing card": "Highlighted listing card"
     }
+  },
+  "contact": {
+    "eyebrow": "Contact us",
+    "title": "Get in touch",
+    "intro": "SmartBiz helps people discover and promote local businesses across Rwanda. Questions about your listing, advertising plans, or your account? Reach us below — we usually reply within one business day.",
+    "phone": "Phone",
+    "office": "Office",
+    "hours": "Hours",
+    "hoursValue": "Mon–Fri, 8:00–17:00 CAT",
+    "formTitle": "Send us a message",
+    "name": "Your name",
+    "email": "Email",
+    "message": "Message",
+    "send": "Send message",
+    "sending": "Sending…",
+    "success": "Thanks! Your message has been sent — we'll be in touch soon."
   }
 }

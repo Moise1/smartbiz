@@ -32,11 +32,60 @@ export async function getUserById(req, res, next) {
   }
 }
 
+// Admin: edit a user's name, email, and role. Superadmin accounts are
+// protected — their details can't be changed here.
+export async function updateUser(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { name, email, role } = req.body;
+
+    const existing = await query('SELECT is_superadmin FROM users WHERE id = $1', [id]);
+    if (!existing.rows[0]) return res.status(404).json({ message: 'User not found' });
+    if (existing.rows[0].is_superadmin) {
+      return res.status(403).json({ message: 'The super admin account cannot be edited here.' });
+    }
+
+    // Guard against taking an email already used by a different account.
+    const clash = await query('SELECT id FROM users WHERE email = $1 AND id <> $2', [email, id]);
+    if (clash.rows.length) return res.status(409).json({ message: 'Email already in use' });
+
+    const result = await query(
+      `UPDATE users SET name = $1, email = $2, role = $3 WHERE id = $4
+       RETURNING id, name, email, role, created_at`,
+      [name, email, role, id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Admin: delete a user. Cascades to their businesses, links, reviews, and
+// subscriptions. The super admin and your own account can't be deleted.
+export async function deleteUser(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (Number(id) === req.user.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
+    }
+    const existing = await query('SELECT is_superadmin FROM users WHERE id = $1', [id]);
+    if (!existing.rows[0]) return res.status(404).json({ message: 'User not found' });
+    if (existing.rows[0].is_superadmin) {
+      return res.status(403).json({ message: 'The super admin account cannot be deleted.' });
+    }
+
+    await query('DELETE FROM users WHERE id = $1', [id]);
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Admin: list all users with how many businesses each is linked to.
 export async function getUsers(req, res, next) {
   try {
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.role, u.created_at,
+      `SELECT u.id, u.name, u.email, u.role, u.is_superadmin, u.created_at,
               COUNT(ub.business_id)::int AS business_count
        FROM users u
        LEFT JOIN user_businesses ub ON ub.user_id = u.id

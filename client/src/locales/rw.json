@@ -80,5 +80,21 @@
       "Featured on the SmartBiz home page": "Igaragara ku rupapuro rw'itangiriro rwa SmartBiz",
       "Highlighted listing card": "Ikarita y'ubucuruzi igaragara cyane"
     }
+  },
+  "contact": {
+    "eyebrow": "Tuvugane",
+    "title": "Tuvugane",
+    "intro": "SmartBiz ifasha abantu kumenya no kwamamaza ubucuruzi bwo mu bice bitandukanye by’u Rwanda. Ufite ikibazo kijyanye n’ubucuruzi bwawe bwashyizwe kuri SmartBiz, gahunda zo kwamamaza, cyangwa konti yawe? Twandikire hano hepfo — ubusanzwe turagusubiza mu gihe cy’umunsi umwe w’akazi.",
+    "phone": "Telefoni",
+    "office": "Ibiro",
+    "hours": "Amasaha y’akazi",
+    "hoursValue": "Kuwa Mbere–Kuwa Gatanu, 8:00–17:00 CAT",
+    "formTitle": "Twandikire ubutumwa",
+    "name": "Amazina yawe",
+    "email": "Imeyili",
+    "message": "Ubutumwa",
+    "send": "Ohereza ubutumwa",
+    "sending": "Kohereza…",
+    "success": "Murakoze! Ubutumwa bwawe bwoherejwe — tuzabagezaho vuba."
   }
 }

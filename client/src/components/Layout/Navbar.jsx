@@ -40,10 +40,7 @@ export default function Navbar() {
           {user ? (
             <ProfileMenu />
           ) : (
-            <>
-              <Link to="/login" className="btn-secondary text-sm py-1.5">{t('nav.login')}</Link>
-              <Link to="/register" className="btn-primary text-sm py-1.5">{t('nav.register')}</Link>
-            </>
+            <Link to="/login" className="btn-primary text-sm py-1.5">{t('nav.login')}</Link>
           )}
         </div>
       </div>
