@@ -42,3 +42,47 @@ export async function sendContactEmail({ name, email, message }) {
   });
   return { delivered: true };
 }
+
+// Welcome a newly-created business owner with their login details. Returns
+// { delivered } — false when SMTP isn't configured (message is only logged).
+// Never throws: account creation must not fail because email failed.
+export async function sendWelcomeEmail({ name, email, password }) {
+  const loginUrl = `${(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '')}/login`;
+  const subject = 'Welcome to SmartBiz 🎉';
+  const text = [
+    `Hi ${name},`,
+    '',
+    'Congratulations — your SmartBiz business owner account has been created!',
+    'You can now sign in and list your businesses so customers across Rwanda can find you.',
+    '',
+    'Your login details:',
+    `  Email: ${email}`,
+    `  Temporary password: ${password}`,
+    '',
+    `Sign in here: ${loginUrl}`,
+    '',
+    'For your security, please change your password after your first sign-in',
+    '(open the profile menu at the top right → Edit profile).',
+    '',
+    'Welcome aboard,',
+    'The SmartBiz team',
+  ].join('\n');
+
+  if (!transporter) {
+    console.warn(`[welcome] SMTP not configured — welcome email NOT sent to ${email}.`);
+    return { delivered: false };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: email,
+      subject,
+      text,
+    });
+    return { delivered: true };
+  } catch (err) {
+    console.error(`[welcome] Failed to send welcome email to ${email}:`, err.message);
+    return { delivered: false };
+  }
+}

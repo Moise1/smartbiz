@@ -260,23 +260,14 @@ export default function UsersSection() {
 
 function AddOwnerModal({ onClose, qc }) {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [business, setBusiness] = useState({ name: '', description: '', category_id: '', city: 'Kigali' });
   const [created, setCreated] = useState(null);
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
-  const setBiz = (field) => (e) => setBusiness((b) => ({ ...b, [field]: e.target.value }));
-
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.get('/categories'),
-  });
 
   const mutation = useMutation({
-    mutationFn: () => api.post('/users/business-owners', { ...form, business }),
+    mutationFn: () => api.post('/users/business-owners', form),
     onSuccess: (user) => {
       setCreated(user);
       qc.invalidateQueries({ queryKey: ['admin-users'] });
-      qc.invalidateQueries({ queryKey: ['all-businesses-admin'] });
-      qc.invalidateQueries({ queryKey: ['businesses'] });
     },
   });
 
@@ -300,10 +291,13 @@ function AddOwnerModal({ onClose, qc }) {
             <h2 className="text-lg font-bold text-gray-900">Business owner created</h2>
             <p className="text-sm text-gray-500 mt-1">
               <span className="font-medium text-gray-700">{created.name}</span> can now sign in with{' '}
-              <span className="font-medium text-gray-700">{created.email}</span> and the password you set.
-              {created.business && (
-                <> Their business <span className="font-medium text-gray-700">{created.business.name}</span> was created and linked to them.</>
-              )}
+              <span className="font-medium text-gray-700">{created.email}</span> and the password you set,
+              then register their businesses from their dashboard.
+            </p>
+            <p className={`text-sm mt-3 rounded-lg px-3 py-2 ${created.emailDelivered ? 'bg-brand-50 text-brand-800' : 'bg-amber-50 text-amber-700'}`}>
+              {created.emailDelivered
+                ? '📧 A welcome email with their login details was sent.'
+                : 'Note: the welcome email could not be sent (email is not configured on the server). Share the login details manually.'}
             </p>
             <button onClick={onClose} className="btn-primary mt-5 justify-center">Done</button>
           </div>
@@ -314,13 +308,12 @@ function AddOwnerModal({ onClose, qc }) {
               Add Business Owner
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Create a business-owner account and their first business — both are created together.
+              Create a business-owner account. They sign in and register their own businesses.
             </p>
             <form
               onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
               className="space-y-4"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Owner</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
                 <input required value={form.name} onChange={set('name')} className="input" placeholder="Jane Uwase" />
@@ -334,36 +327,12 @@ function AddOwnerModal({ onClose, qc }) {
                 <input type="text" required minLength={6} value={form.password} onChange={set('password')} className="input" placeholder="Min. 6 characters" />
                 <p className="text-xs text-gray-400 mt-1">Share this with the owner so they can sign in.</p>
               </div>
-
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 pt-2">Their business</p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Business name</label>
-                <input required value={business.name} onChange={setBiz('name')} className="input" placeholder="e.g. Kigali Coffee House" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea required rows={2} value={business.description} onChange={setBiz('description')} className="input resize-none" placeholder="Describe the business…" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select required value={business.category_id} onChange={setBiz('category_id')} className="input">
-                    <option value="">Select category</option>
-                    {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City / District</label>
-                  <input required value={business.city} onChange={setBiz('city')} className="input" placeholder="e.g. Gasabo" />
-                </div>
-              </div>
-
               {mutation.error && (
                 <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{errorText(mutation.error)}</p>
               )}
               <div className="flex gap-3">
                 <button type="submit" disabled={mutation.isPending} className="btn-primary flex-1 justify-center">
-                  {mutation.isPending ? 'Creating…' : 'Create owner & business'}
+                  {mutation.isPending ? 'Creating…' : 'Create account'}
                 </button>
                 <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
               </div>

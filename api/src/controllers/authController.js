@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { query, getClient } from '../config/database.js';
+import { query } from '../config/database.js';
+import { sendWelcomeEmail } from '../config/mailer.js';
 
 function signToken(user) {
   return jwt.sign(
@@ -36,47 +37,65 @@ export async function register(req, res, next) {
   }
 }
 
-// Admin-only: create a business-owner account together with their first
-// business. User, business, and the ownership link are created atomically.
+// Admin-only: create a business-owner account. The owner then signs in and
+// registers their own businesses from their dashboard.
 export async function createBusinessOwner(req, res, next) {
-  const client = await getClient();
   try {
-    const { name, email, password, business = {} } = req.body;
+    const { name, email, password } = req.body;
 
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+    const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ message: 'Email already in use' });
     }
 
-    await client.query('BEGIN');
-
     const passwordHash = await bcrypt.hash(password, 12);
-    const userResult = await client.query(
+    const result = await query(
       `INSERT INTO users (name, email, password_hash, role)
        VALUES ($1, $2, $3, 'business_owner')
        RETURNING id, name, email, role, created_at`,
       [name, email, passwordHash]
     );
-    const user = userResult.rows[0];
+    const user = result.rows[0];
 
-    const bizResult = await client.query(
-      `INSERT INTO businesses (owner_id, name, description, category_id, city)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name`,
-      [user.id, business.name, business.description, business.category_id, business.city]
-    );
-    await client.query(
-      'INSERT INTO user_businesses (user_id, business_id) VALUES ($1, $2)',
-      [user.id, bizResult.rows[0].id]
-    );
+    // Welcome the new owner with their login details (never blocks creation).
+    const { delivered } = await sendWelcomeEmail({ name, email, password });
 
-    await client.query('COMMIT');
-    res.status(201).json({ ...user, business: bizResult.rows[0] });
+    res.status(201).json({ ...user, emailDelivered: delivered });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
     next(err);
-  } finally {
-    client.release();
+  }
+}
+
+// Any signed-in user edits their own profile (name, email, optional new
+// password). Role is never changed here. A fresh token is returned because
+// the email lives in the token.
+export async function updateProfile(req, res, next) {
+  try {
+    const { name, email, password } = req.body;
+
+    const clash = await query('SELECT id FROM users WHERE email = $1 AND id <> $2', [email, req.user.id]);
+    if (clash.rows.length) return res.status(409).json({ message: 'Email already in use' });
+
+    let result;
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 12);
+      result = await query(
+        `UPDATE users SET name = $1, email = $2, password_hash = $3 WHERE id = $4
+         RETURNING id, name, email, role, is_superadmin, created_at`,
+        [name, email, passwordHash, req.user.id]
+      );
+    } else {
+      result = await query(
+        `UPDATE users SET name = $1, email = $2 WHERE id = $3
+         RETURNING id, name, email, role, is_superadmin, created_at`,
+        [name, email, req.user.id]
+      );
+    }
+
+    const user = result.rows[0];
+    res.json({ token: signToken(user), user });
+  } catch (err) {
+    next(err);
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Building2, Star, Edit, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ShieldCheck, Building2, Star, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -14,9 +14,6 @@ const PAGE_SIZE = 10;
 export default function SuperAdminDashboard() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm());
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -30,11 +27,6 @@ export default function SuperAdminDashboard() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
-
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.get('/categories'),
-  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['all-businesses-admin', page, search],
@@ -52,41 +44,12 @@ export default function SuperAdminDashboard() {
   const from = (page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page * PAGE_SIZE, total);
 
-  const saveMutation = useMutation({
-    mutationFn: (payload) =>
-      editingId ? api.put(`/businesses/${editingId}`, payload) : api.post('/businesses', payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['all-businesses-admin'] });
-      setShowForm(false);
-      setEditingId(null);
-      setForm(emptyForm());
-    },
-  });
-
+  // Super admin can remove any business (moderation) but not edit its details —
+  // owners edit their own from their dashboard.
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/businesses/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['all-businesses-admin'] }),
   });
-
-  function openEdit(b) {
-    setForm({
-      name: b.name || '',
-      description: b.description || '',
-      category_id: b.category_id || '',
-      phone: b.phone || '',
-      email: b.email || '',
-      website: b.website || '',
-      address: b.address || '',
-      city: b.city || '',
-      latitude: b.latitude || '',
-      longitude: b.longitude || '',
-    });
-    setEditingId(b.id);
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   return (
     <div className="flex">
@@ -110,65 +73,6 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
       </div>
-
-      {/* Add / Edit Form */}
-      {showForm && (
-        <div className="card p-6 mb-8 border border-brand-200">
-          <h2 className="font-semibold text-gray-900 mb-4">{editingId ? 'Edit Business' : 'New Business'}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Business Name *</label>
-              <input value={form.name} onChange={set('name')} className="input" placeholder="e.g. Kigali Coffee House" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Description *</label>
-              <textarea value={form.description} onChange={set('description')} rows={3} className="input resize-none" placeholder="Describe the business…" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Category *</label>
-              <select value={form.category_id} onChange={set('category_id')} className="input">
-                <option value="">Select category</option>
-                {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">City / District *</label>
-              <input value={form.city} onChange={set('city')} className="input" placeholder="e.g. Gasabo" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
-              <input value={form.phone} onChange={set('phone')} className="input" placeholder="+250 7xx xxx xxx" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={set('email')} className="input" placeholder="contact@business.com" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
-              <input value={form.address} onChange={set('address')} className="input" placeholder="Street, District, Rwanda" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Website</label>
-              <input value={form.website} onChange={set('website')} className="input" placeholder="https://…" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
-              <input value={form.latitude} onChange={set('latitude')} className="input" placeholder="-1.94" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
-              <input value={form.longitude} onChange={set('longitude')} className="input" placeholder="30.06" />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-5">
-            <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending} className="btn-primary">
-              {saveMutation.isPending ? 'Saving…' : editingId ? 'Update' : 'Create Business'}
-            </button>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="btn-secondary">Cancel</button>
-          </div>
-          {saveMutation.error && <p className="mt-3 text-sm text-red-500">{saveMutation.error.message}</p>}
-        </div>
-      )}
 
       {/* Table */}
       <section>
@@ -250,15 +154,16 @@ export default function SuperAdminDashboard() {
                         : <span className="inline-block w-2 h-2 rounded-full bg-gray-300" title="Unverified" />}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => openEdit(b)} className="btn-secondary py-1 px-2.5" title="Edit">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="flex justify-end">
                         <button
-                          onClick={() => deleteMutation.mutate(b.id)}
+                          onClick={() => {
+                            if (window.confirm(`Delete "${b.name}"? It disappears from all listings.`)) {
+                              deleteMutation.mutate(b.id);
+                            }
+                          }}
                           disabled={deleteMutation.isPending}
                           className="btn-secondary py-1 px-2.5 text-red-500 hover:bg-red-50"
-                          title="Delete"
+                          title="Delete business"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -326,8 +231,4 @@ export default function SuperAdminDashboard() {
       </div>
     </div>
   );
-}
-
-function emptyForm() {
-  return { name: '', description: '', category_id: '', phone: '', email: '', website: '', address: '', city: 'Kigali', latitude: '', longitude: '' };
 }

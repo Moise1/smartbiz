@@ -19,10 +19,6 @@ router.post(
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('A valid email is required').normalizeEmail({ gmail_remove_dots: false }),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('business.name').trim().notEmpty().withMessage('Business name is required'),
-    body('business.description').trim().notEmpty().withMessage('Business description is required'),
-    body('business.category_id').isInt().withMessage('Please select a business category'),
-    body('business.city').trim().notEmpty().withMessage('Business city is required'),
     validate,
   ],
   createBusinessOwner
