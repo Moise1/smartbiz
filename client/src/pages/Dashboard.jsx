@@ -13,7 +13,19 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
+  const [coverFile, setCoverFile] = useState(null);
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
   const isOwner = user?.role === 'business_owner' || user?.role === 'admin';
+
+  function resetForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm());
+    setCoverFile(null);
+    setShowNewCat(false);
+    setNewCatName('');
+  }
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -41,13 +53,33 @@ export default function Dashboard() {
   const totalViews = (myBusinesses || []).reduce((sum, b) => sum + Number(b.viewed_times || 0), 0);
 
   const saveMutation = useMutation({
-    mutationFn: (data) =>
-      editingId ? api.put(`/businesses/${editingId}`, data) : api.post('/businesses', data),
+    // Save the business, then (optionally) upload a chosen cover photo to it.
+    mutationFn: async (data) => {
+      const saved = editingId
+        ? await api.put(`/businesses/${editingId}`, data)
+        : await api.post('/businesses', data);
+      const id = saved?.id || editingId;
+      if (coverFile && id) {
+        const fd = new FormData();
+        fd.append('image', coverFile);
+        await api.post(`/businesses/${id}/cover`, fd);
+      }
+      return saved;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-businesses'] });
-      setShowForm(false);
-      setEditingId(null);
-      setForm(emptyForm());
+      qc.invalidateQueries({ queryKey: ['businesses'] });
+      resetForm();
+    },
+  });
+
+  const createCatMutation = useMutation({
+    mutationFn: (name) => api.post('/categories', { name }),
+    onSuccess: (cat) => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      setForm((f) => ({ ...f, category_id: String(cat.id) }));
+      setShowNewCat(false);
+      setNewCatName('');
     },
   });
 
@@ -70,6 +102,9 @@ export default function Dashboard() {
       longitude: b.longitude || '',
     });
     setEditingId(b.id);
+    setCoverFile(null);
+    setShowNewCat(false);
+    setNewCatName('');
     setShowForm(true);
   }
 
@@ -110,7 +145,7 @@ export default function Dashboard() {
           <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
         </div>
         {isOwner && (
-          <button onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm()); }} className="btn-primary">
+          <button onClick={() => (showForm ? resetForm() : (resetForm(), setShowForm(true)))} className="btn-primary">
             <Plus className="w-4 h-4" />
             Add Business
           </button>
@@ -131,11 +166,44 @@ export default function Dashboard() {
               <textarea value={form.description} onChange={set('description')} rows={3} className="input resize-none" placeholder="Describe your business…" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Category *</label>
-              <select value={form.category_id} onChange={set('category_id')} className="input">
-                <option value="">Select category</option>
-                {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-600">Category *</label>
+                <button
+                  type="button"
+                  onClick={() => { setShowNewCat((s) => !s); createCatMutation.reset(); }}
+                  className="text-xs text-brand-600 hover:underline"
+                >
+                  {showNewCat ? 'Choose existing' : '+ New category'}
+                </button>
+              </div>
+              {showNewCat ? (
+                <div className="flex gap-2">
+                  <input
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    className="input"
+                    placeholder="New category name"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => createCatMutation.mutate(newCatName.trim())}
+                    disabled={!newCatName.trim() || createCatMutation.isPending}
+                    className="btn-primary whitespace-nowrap"
+                  >
+                    {createCatMutation.isPending ? 'Adding…' : 'Add'}
+                  </button>
+                </div>
+              ) : (
+                <select value={form.category_id} onChange={set('category_id')} className="input">
+                  <option value="">Select category</option>
+                  {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
+              {createCatMutation.error && (
+                <p className="text-xs text-red-500 mt-1">
+                  {createCatMutation.error?.message || 'Could not create the category.'}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">City *</label>
@@ -165,6 +233,20 @@ export default function Dashboard() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Longitude (optional)</label>
               <input type="number" step="any" value={form.longitude} onChange={set('longitude')} className="input" placeholder="30.0619" />
             </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Business picture (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-50 file:text-brand-700 file:font-medium hover:file:bg-brand-100"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {coverFile
+                  ? `Selected: ${coverFile.name}`
+                  : "Optional — if you don't upload one, an image based on the category is shown."}
+              </p>
+            </div>
           </div>
           <div className="flex gap-3 mt-5">
             <button
@@ -174,7 +256,7 @@ export default function Dashboard() {
             >
               {saveMutation.isPending ? 'Saving…' : editingId ? 'Update' : 'Create'}
             </button>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="btn-secondary">
+            <button onClick={resetForm} className="btn-secondary">
               Cancel
             </button>
           </div>

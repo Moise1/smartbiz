@@ -17,13 +17,17 @@ export async function getCategories(_req, res, next) {
 
 export async function createCategory(req, res, next) {
   try {
-    const { name, description, icon } = req.body;
+    const { name, description = null, icon = 'briefcase' } = req.body;
     const result = await query(
       'INSERT INTO categories (name, description, icon) VALUES ($1,$2,$3) RETURNING *',
-      [name, description, icon]
+      [name.trim(), description, icon]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    // Unique violation on categories.name
+    if (err.code === '23505') {
+      return res.status(409).json({ message: 'A category with that name already exists.' });
+    }
     next(err);
   }
 }

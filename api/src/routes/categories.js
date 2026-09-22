@@ -7,8 +7,9 @@ import { validate } from '../middleware/validate.js';
 const router = Router();
 
 router.get('/', getCategories);
-router.post('/', authenticate, requireRole('admin'), [
-  body('name').trim().notEmpty(),
+// Owners can add a category when the one they need isn't listed yet.
+router.post('/', authenticate, requireRole('admin', 'business_owner'), [
+  body('name').trim().notEmpty().withMessage('Category name is required'),
   validate,
 ], createCategory);
 
